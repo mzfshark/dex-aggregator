@@ -1,7 +1,7 @@
 import React from "react";
 import { Alert as BootstrapAlert } from "react-bootstrap";
 
-const Alert = ({ message, transactionHash, variant, setShowAlert }) => {
+const Alert = ({ message, transactionHash, variant, setShowAlert, alertMessage="" }) => {
   return (
     <BootstrapAlert
       variant={variant}
@@ -22,6 +22,13 @@ const Alert = ({ message, transactionHash, variant, setShowAlert }) => {
           {/* link to a block explorer */}
           {/* <a href={`https://block-explorer.com/tx/${transactionHash}`} target="_blank" rel="noopener noreferrer">View on Explorer</a> */}
         </div>
+      )}
+      {alertMessage && (
+        <div className="transaction-details">
+          <span>
+          {alertMessage}
+          </span>
+       </div>
       )}
     </BootstrapAlert>
   );

@@ -1,24 +1,12 @@
 {
   "31337": {
     "aggregator": {
-      "address": "0x996785Fe937d92EDBF420F3Bf70Acc62ecD6f655"
-    },
-    "dai": {
-      "address": "0x6B175474E89094C44Da98b954EedeAC495271d0F"
-    },
-    "weth": {
-      "address": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
+      "address": "0xeA2e668d430e5AA15babA2f5c5edfd4F9Ef6EB73"
     }
   },
   "1": {
     "aggregator": {
       "address": "0x52bad4a8584909895c22bdecf8dbf33314468fb0"
-    },
-    "dai": {
-      "address": "0x6B175474E89094C44Da98b954EedeAC495271d0F"
-    },
-    "weth": {
-      "address": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
     }
   }
 }
