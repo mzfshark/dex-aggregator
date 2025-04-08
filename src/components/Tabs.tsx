@@ -4,8 +4,9 @@ import Nav from "react-bootstrap/Nav";
 import { LinkContainer } from "react-router-bootstrap";
 import styles from "../styles/Theme.module.css";
 
-const Tabs = () => {
+const Tabs: React.FC = () => {
   const location = useLocation();
+
   return (
     <Nav>
       <LinkContainer to="/swap">

@@ -1,6 +1,8 @@
+// components/Loading.tsx
 import Spinner from "react-bootstrap/Spinner";
+import React from "react";
 
-const Loading = () => {
+const Loading: React.FC = () => {
   return (
     <div className="text-center my-5">
       <Spinner animation="grow" />

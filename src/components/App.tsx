@@ -1,19 +1,14 @@
-import {
-  BrowserRouter as Router,
-  Route,
-  Routes,
-  Navigate,
-} from "react-router-dom";
+// components/App.tsx
+import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-dom";
 import { Container } from "react-bootstrap";
-import { ContractsProvider } from "./ContractContext";
+import { ContractsProvider } from "../contexts/ContractsContext";
 import styles from "../styles/App.module.css";
 
-// Components
 import Navigation from "./Navigation";
 import Transactions from "./Transactions";
 import Swap from "./Swap";
 
-function App() {
+const App = () => {
   return (
     <ContractsProvider>
       <Container fluid className={styles.container}>
@@ -28,6 +23,6 @@ function App() {
       </Container>
     </ContractsProvider>
   );
-}
+};
 
 export default App;

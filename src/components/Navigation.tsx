@@ -1,9 +1,10 @@
+// components/Navigation.tsx
 import { useSelector, useDispatch } from "react-redux";
 import Blockies from "react-blockies";
 import Navbar from "react-bootstrap/Navbar";
 import { Button } from "react-bootstrap";
 import Dropdown from "react-bootstrap/Dropdown";
-
+import { RootState } from "../store";
 import styles from "../styles/Theme.module.css";
 import logo from "../img/logo.png";
 import localhostIcon from "../img/icons8-local-network-32.png";
@@ -13,26 +14,29 @@ import ethereumIcon from "../img/ethereum.png";
 import { loadAccount } from "../store/interactions";
 import Tabs from "./Tabs";
 
-const Navigation = () => {
-  const account = useSelector((state) => state.provider.account);
-  const chainId = useSelector((state) => state.provider.chainId);
+const Navigation: React.FC = () => {
+  const account = useSelector((state: RootState) => state.provider.account);
+  const chainId = useSelector((state: RootState) => state.provider.chainId);
   const dispatch = useDispatch();
 
   const connectHandler = async () => {
     await loadAccount(dispatch);
   };
 
-  const networkHandler = async (e) => {
-    console.log("networkHandler", e);
-    await window.ethereum.request({
-      method: "wallet_switchEthereumChain",
-      params: [{ chainId: e }],
-    });
+  const networkHandler = async (e: string | null) => {
+    if (!e) return;
+    try {
+      await window.ethereum.request({
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId: e }],
+      });
+    } catch (error) {
+      console.error("Failed to switch network:", error);
+    }
   };
 
-  const getNetworkIcon = (chainId) => {
-    console.log("chainId", chainId);
-    switch (chainId) {
+  const getNetworkIcon = (chainHex: string) => {
+    switch (chainHex) {
       case "0x31337":
         return localhostIcon;
       case "0xaa36a7":
@@ -44,9 +48,8 @@ const Navigation = () => {
     }
   };
 
-  const currentNetworkIcon = getNetworkIcon(
-    chainId ? `0x${chainId.toString(16)}` : `0`
-  );
+  const chainHex = chainId ? `0x${chainId.toString(16)}` : "0";
+  const currentNetworkIcon = getNetworkIcon(chainHex);
 
   return (
     <Navbar className={styles.customNavbar} expand="lg">
@@ -75,12 +78,11 @@ const Navigation = () => {
           </Dropdown.Toggle>
           <Dropdown.Menu>
             <Dropdown.Item eventKey="0x7A69">
-              <img src={localhostIcon} alt="Localhost Icon" width="20" />{" "}
-              Localhost
+              <img src={localhostIcon} alt="Localhost Icon" width="20" /> Localhost
             </Dropdown.Item>
             {/* <Dropdown.Item eventKey="0xaa36a7">
-                      <img src={sepoliaIcon} alt="Sepolia Icon" width="20" /> Sepolia
-                  </Dropdown.Item> */}
+              <img src={sepoliaIcon} alt="Sepolia Icon" width="20" /> Sepolia
+            </Dropdown.Item> */}
             <Dropdown.Item eventKey="0x1">
               <img src={ethereumIcon} alt="Ethereum Icon" width="20" /> Ethereum
             </Dropdown.Item>
@@ -97,7 +99,7 @@ const Navigation = () => {
               spotColor="#767F92"
               className="identicon mx-2"
             />
-            {account.slice(0, 6) + "..." + account.slice(38, 42)}
+            {`${account.slice(0, 6)}...${account.slice(-4)}`}
           </Navbar.Text>
         ) : (
           <Button className={styles.connectBtn} onClick={connectHandler}>
