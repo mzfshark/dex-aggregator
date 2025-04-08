@@ -1,18 +1,18 @@
-// components/NetworkSelector.tsx
-import { useDispatch } from 'react-redux';
-import { setChainId } from '../store/networkSlice';
-
-const NetworkSelector = () => {
-  const dispatch = useDispatch();
-
-  const handleChange = (e) => {
-    dispatch(setChainId(e.target.value));
+interface NetworkSelectorProps {
+    selected: string;
+    onChange: (chainId: string) => void;
+    options: Array<{ chainId: string; name: string }>;
+  }
+  
+  const NetworkSelector: React.FC<NetworkSelectorProps> = ({ selected, onChange, options }) => {
+    return (
+      <select value={selected} onChange={(e) => onChange(e.target.value)}>
+        {options.map((opt) => (
+          <option key={opt.chainId} value={opt.chainId}>
+            {opt.name}
+          </option>
+        ))}
+      </select>
+    );
   };
-
-  return (
-    <select onChange={handleChange}>
-      <option value="1666600000">Harmony</option>
-      {/* adicionar outras redes */}
-    </select>
-  );
-};
+  

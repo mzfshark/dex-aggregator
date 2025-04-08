@@ -1,4 +1,4 @@
-// components/App.tsx
+import React from "react";
 import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-dom";
 import { Container } from "react-bootstrap";
 import { ContractsProvider } from "../contexts/ContractsContext";
@@ -8,7 +8,7 @@ import Navigation from "./Navigation";
 import Transactions from "./Transactions";
 import Swap from "./Swap";
 
-const App = () => {
+const App: React.FC = () => {
   return (
     <ContractsProvider>
       <Container fluid className={styles.container}>

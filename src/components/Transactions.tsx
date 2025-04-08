@@ -1,12 +1,20 @@
-import React from "react";
-
-const Transactions: React.FC = () => {
-  return (
-    <div>
-      <h2>Transactions</h2>
-      <p>No transactions to display at the moment.</p>
-    </div>
+interface Transaction {
+    hash: string;
+    status: string;
+    timestamp: number;
+  }
+  
+  interface TransactionsProps {
+    list: Transaction[];
+  }
+  
+  const Transactions: React.FC<TransactionsProps> = ({ list }) => (
+    <ul>
+      {list.map((tx) => (
+        <li key={tx.hash}>
+          <span>{tx.hash}</span> - <span>{tx.status}</span>
+        </li>
+      ))}
+    </ul>
   );
-};
-
-export default Transactions;
+  

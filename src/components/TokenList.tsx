@@ -1,16 +1,23 @@
-// components/TokenList.tsx
-import { useSelector } from 'react-redux';
-import { getTokensByChain } from '../utils/getTokensByChain';
-
-const TokenList = () => {
-  const chainId = useSelector(state => state.network.chainId);
-  const tokens = getTokensByChain(chainId);
-
-  return (
-    <ul>
-      {tokens.map(token => (
-        <li key={token.address}>{token.symbol}</li>
+interface Token {
+    address: string;
+    symbol: string;
+    name: string;
+    logoURI: string;
+  }
+  
+  interface TokenListProps {
+    tokens: Token[];
+    onSelect: (token: Token) => void;
+  }
+  
+  const TokenList: React.FC<TokenListProps> = ({ tokens, onSelect }) => (
+    <ul className="token-list">
+      {tokens.map((token) => (
+        <li key={token.address} onClick={() => onSelect(token)}>
+          <img src={token.logoURI} alt={token.symbol} />
+          {token.symbol}
+        </li>
       ))}
     </ul>
   );
-};
+  

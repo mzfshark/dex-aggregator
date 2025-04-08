@@ -1,28 +1,17 @@
-// components/Alert.tsx
-import React from "react";
-import { Alert as BootstrapAlert } from "react-bootstrap";
+import React from 'react';
 
-type AlertProps = {
+interface AlertProps {
   message: string;
-  transactionHash?: string;
-  variant: "success" | "danger" | "warning" | "info";
-  setShowAlert: (show: boolean) => void;
-};
+  type: 'success' | 'error' | 'warning' | 'info';
+  onClose?: () => void;
+}
 
-const Alert: React.FC<AlertProps> = ({ message, transactionHash, variant, setShowAlert }) => {
+const Alert: React.FC<AlertProps> = ({ message, type, onClose }) => {
   return (
-    <BootstrapAlert variant={variant} onClose={() => setShowAlert(false)} dismissible className="alert">
-      <BootstrapAlert.Heading>{message}</BootstrapAlert.Heading>
-      <hr />
-      {transactionHash && (
-        <div className="transaction-details">
-          <strong>Transaction Hash:</strong>
-          <span>
-            {transactionHash.slice(0, 6) + "..." + transactionHash.slice(-6)}
-          </span>
-        </div>
-      )}
-    </BootstrapAlert>
+    <div className={`alert alert-${type}`}>
+      {message}
+      {onClose && <button onClick={onClose}>x</button>}
+    </div>
   );
 };
 

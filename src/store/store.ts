@@ -1,3 +1,4 @@
+// store/store.ts
 import { configureStore } from '@reduxjs/toolkit'
 
 import provider from './reducers/provider'
@@ -15,3 +16,7 @@ export const store = configureStore({
       serializableCheck: false
     })
 })
+
+// Tipagem para RootState e AppDispatch
+export type RootState = ReturnType<typeof store.getState>
+export type AppDispatch = typeof store.dispatch
