@@ -7,3 +7,4 @@ const Navigation: React.FC<NavigationProps> = ({ title = "Dex Aggregator" }) => 
     <h1>{title}</h1>
   </nav>
 );
+export default Navigation;

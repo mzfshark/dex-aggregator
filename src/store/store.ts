@@ -1,22 +1,17 @@
-// store/store.ts
-import { configureStore } from '@reduxjs/toolkit'
-
-import provider from './reducers/provider'
-import tokens from './reducers/tokens'
-import aggregator from './reducers/aggregator'
+// src/store/store.ts
+import { configureStore } from '@reduxjs/toolkit';
+import providerReducer from './reducers/provider';
+import tokensReducer from './reducers/tokens';
+import aggregatorReducer from './reducers/aggregator';
 
 export const store = configureStore({
   reducer: {
-    provider,
-    tokens,
-    aggregator
+    provider: providerReducer,
+    tokens: tokensReducer,
+    aggregator: aggregatorReducer,
   },
-  middleware: getDefaultMiddleware =>
-    getDefaultMiddleware({
-      serializableCheck: false
-    })
-})
+});
 
-// Tipagem para RootState e AppDispatch
-export type RootState = ReturnType<typeof store.getState>
-export type AppDispatch = typeof store.dispatch
+// 👇 Exporta o tipo RootState baseado na store atual
+export type RootState = ReturnType<typeof store.getState>;
+export type AppDispatch = typeof store.dispatch;

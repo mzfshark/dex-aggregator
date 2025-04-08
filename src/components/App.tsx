@@ -1,8 +1,13 @@
 import React from "react";
 import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-dom";
-import { Container } from "react-bootstrap";
 import { ContractsProvider } from "./ContractContext";
-import styles from "../styles/App.module.css";
+import {
+  Container,
+  SwapContainer,
+  TokenInfoContainer,
+  TokenSelector,
+  TokenText
+} from '../styles/StyledComponents';
 
 import Navigation from "./Navigation";
 import Transactions from "./Transactions";
@@ -11,12 +16,12 @@ import Swap from "./Swap";
 const App: React.FC = () => {
   return (
     <ContractsProvider>
-      <Container fluid className={styles.container}>
+      <Container>
         <Router>
           <Navigation />
           <Routes>
             <Route path="/swap" element={<Swap />} />
-            <Route path="/trx" element={<Transactions />} />
+            <Route path="/trx" element={<Transactions list={[]} />} />
             <Route path="*" element={<Navigate to="/swap" />} />
           </Routes>
         </Router>

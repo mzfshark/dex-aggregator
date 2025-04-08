@@ -1,12 +1,36 @@
-// utils/getTokensByChain.ts
-import config from '../config.json';
+// src/utils/getTokenByChain.ts
+import rawList from '../lists/tokenList.json';
 
-export const getTokensByChain = (chainId) => {
-  const chainConfig = config[chainId];
-  if (!chainConfig) return [];
+type Token = {
+  address: string;
+  chainId: number;
+  decimals: number;
+  logoURI: string;
+  name: string;
+  symbol: string;
+};
 
-  return Object.entries(chainConfig).map(([key, value]) => ({
-    symbol: key.toUpperCase(),
-    address: value.address,
-  }));
+type TokenList = {
+  items: {
+    operation: string;
+    key: string;
+    value: {
+      enabled: boolean;
+      tokens: Token[];
+    };
+  }[];
+};
+
+const tokenList = rawList as TokenList;
+
+const tokenMap: Record<string, Token[]> = {};
+
+for (const item of tokenList.items) {
+  if (item.operation === 'set' && item.value.enabled) {
+    tokenMap[item.key] = item.value.tokens;
+  }
+}
+
+export const getTokensByChain = (chainKey: string): Token[] => {
+  return tokenMap[chainKey] || [];
 };

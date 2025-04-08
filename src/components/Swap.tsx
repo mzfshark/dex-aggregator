@@ -2,9 +2,12 @@ import React, {
   useState,
   useEffect,
   useContext,
-  ChangeEvent,
   FormEvent,
+  ChangeEvent,
 } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { useAppSelector, useAppDispatch } from '../store/hooks';
+import { parseEther, formatUnits } from 'ethers/lib/utils';
 import Dropdown from "react-bootstrap/Dropdown";
 import Spinner from "react-bootstrap/Spinner";
 import { ethers } from "ethers";
@@ -21,16 +24,26 @@ import {
   ExchangeRateText,
 } from "../styles/StyledComponents";
 import { ContractsContext } from "./ContractContext";
-import { RootState } from "../store/store";
-import { useAppDispatch, useAppSelector } from "../store/hooks";
-import { selectProvider, selectAccount } from "../store/selectors/provider";
 
-
-
+interface RootState {
+  provider: {
+    connection: ethers.utils.Web3Provider;
+    account: string;
+  };
+  aggregator: {
+    swapping: {
+      isSwapping: boolean;
+      isSuccess: boolean;
+      transactionHash: string;
+    };
+  };
+  tokens: {
+    symbols: Map<string, string>;
+  };
+}
 
 const Swap: React.FC = () => {
   const contracts = useContext(ContractsContext);
-
   const [inputToken, setInputToken] = useState<string | null>(null);
   const [outputToken, setOutputToken] = useState<string | null>(null);
   const [inputAmount, setInputAmount] = useState<string>("0");
@@ -38,23 +51,27 @@ const Swap: React.FC = () => {
   const [bestDeal, setBestDeal] = useState<string | null>(null);
   const [router, setRouter] = useState<string | null>(null);
   const [path, setPath] = useState<string[]>([]);
-  const [price, setPrice] = useState<string | number>("N/A");
+  const [price, setPrice] = useState<string | number>(0);
   const [showAlert, setShowAlert] = useState<boolean>(false);
 
+  const provider = useAppSelector((state) => state.provider.connection);
+  const account = useAppSelector((state) => state.provider.account);
+  const isSwapping = useAppSelector((state) => state.aggregator.swapping.isSwapping);
+  const symbols = useAppSelector((state) => state.tokens.symbols);
+  
   const dispatch = useAppDispatch();
-  const provider = useAppSelector(selectProvider);
-  const account = useAppSelector(state => state.provider.account);
-  const isSwapping = useAppSelector(state => state.aggregator.swapping.isSwapping);
-  const isSuccess = useAppSelector(state => state.aggregator.swapping.isSuccess);
-  const transactionHash = useAppSelector(state => state.aggregator.swapping.transactionHash);
-  const symbols = useAppSelector((state: RootState) => state.tokens.symbols) as Record<string, string>;
- 
-
-  const connectHandler = async (): Promise<void> => {
+  
+  const isSuccess = useSelector(
+    (state: RootState) => state.aggregator.swapping.isSuccess
+  );
+  const transactionHash = useSelector(
+    (state: RootState) => state.aggregator.swapping.transactionHash
+  );
+  const connectHandler = async () => {
     await loadAccount(dispatch);
   };
 
-  const swapHandler = async (e: FormEvent<HTMLButtonElement>): Promise<void> => {
+  const swapHandler = async (e: FormEvent) => {
     e.preventDefault();
 
     if (inputToken === outputToken) {
@@ -80,38 +97,59 @@ const Swap: React.FC = () => {
     setShowAlert(true);
   };
 
-  const getPrice = (): void => {
+  const getPrice = () => {
     if (inputToken === outputToken) {
       setPrice(0);
-    } else if (inputAmount === "0") {
+    }
+    if (inputAmount === "0") {
       setPrice("N/A");
-    } else if (outputAmount && inputAmount) {
-      const calculatedPrice = Number(bestDeal) / Number(inputAmount);
-      setPrice(calculatedPrice.toString());
+      return;
+    }
+
+    if (outputAmount && inputAmount) {
+      const price = Number(bestDeal) / Number(inputAmount);
+      setPrice(price.toString());
     }
   };
 
-  const handleTokenSelection = (type: "input" | "output", token: string): void => {
-    if (type === "input") setInputToken(token);
-    else setOutputToken(token);
+  const handleTokenSelection = (type: "input" | "output", token: string) => {
+    if (type === "input") {
+      setInputToken(token);
+    } else {
+      setOutputToken(token);
+    }
+
+    if (
+      inputToken &&
+      outputToken &&
+      inputToken !== outputToken
+    ) {
+      setPath([
+        symbols.get(inputToken) as string,
+        symbols.get(outputToken) as string,
+      ]);
+    }
+
+    if (
+      inputToken &&
+      outputToken &&
+      inputToken === outputToken
+    ) {
+      setPath([]);
+    }
   };
 
-  const handleInputChange = (e: ChangeEvent<HTMLInputElement>): void => {
-    const value = e.target.value;
-
-    if (!value) {
-      setInputAmount("0");
+  const handleInputChange = async (
+    e: ChangeEvent<HTMLInputElement>
+  ) => {
+    if (!e.target.value) {
       setOutputAmount("0");
+      setInputAmount("0");
       return;
     }
 
-    try {
-      const enteredAmount = ethers.parseEther(value.toString());
-      setInputAmount(enteredAmount.toString());
-    } catch (error) {
-      alert("Invalid input value.");
-      return;
-    }
+    const enteredAmount = ethers.parseEther(e.target.value.toString());
+    setInputAmount(enteredAmount.toString());
 
     if (!inputToken || !outputToken) {
       alert("Please select both input and output tokens.");
@@ -126,25 +164,33 @@ const Swap: React.FC = () => {
 
   useEffect(() => {
     if (inputToken && outputToken && inputToken !== outputToken) {
-      const inputAddr = symbols[inputToken];
-      const outputAddr = symbols[outputToken];
-      if (inputAddr && outputAddr) {
-        setPath([inputAddr, outputAddr]);
-      }
-    } else {
+      setPath([
+        symbols.get(inputToken) as string,
+        symbols.get(outputToken) as string,
+      ]);
+    }
+    if (inputToken && outputToken && inputToken === outputToken) {
       setPath([]);
     }
   }, [inputToken, outputToken, symbols]);
 
   useEffect(() => {
-    const fetchBestDeal = async (): Promise<void> => {
+    const fetchBestDeal = async () => {
       if (path.length === 2 && inputAmount) {
-        const result = await contracts.aggregator.getBestAmountsOutOnUniswapForks(path, inputAmount);
-        setBestDeal(result[0]);
-        setRouter(result[1]);
+        const fetchBestDealResult =
+          await contracts.aggregator.getBestAmountsOutOnUniswapForks(
+            path,
+            inputAmount
+          );
 
-        const formatted = ethers.formatUnits(result[0], 18);
-        setOutputAmount(parseFloat(formatted).toFixed(2));
+        setBestDeal(fetchBestDealResult[0]);
+        setRouter(fetchBestDealResult[1]);
+
+        const calculatedOutputAmount = ethers.formatUnits(
+          fetchBestDealResult[0],
+          18
+        );
+        setOutputAmount(parseFloat(calculatedOutputAmount).toFixed(2));
       }
     };
     fetchBestDeal();
@@ -157,7 +203,6 @@ const Swap: React.FC = () => {
   return (
     <Container>
       <SwapContainer>
-        {/* INPUT TOKEN */}
         <TokenInfoContainer>
           <InputField
             type="text"
@@ -166,19 +211,24 @@ const Swap: React.FC = () => {
             onChange={handleInputChange}
             disabled={!outputToken || !inputToken}
           />
-          <StyledDropdown onSelect={(token) => handleTokenSelection("input", token!)}>
-            <Dropdown.Toggle>{inputToken ?? "Select token"}</Dropdown.Toggle>
+          <StyledDropdown
+            onSelect={(token) =>
+              token && handleTokenSelection("input", token)
+            }
+          >
+            <Dropdown.Toggle>
+              {inputToken ? inputToken : "Select token"}
+            </Dropdown.Toggle>
             <Dropdown.Menu>
-            {Object.entries(symbols).map(([symbol, address]) => (
-              <Dropdown.Item key={address} eventKey={symbol}>
-                {symbol}
-              </Dropdown.Item>
-            ))}
+              {Array.from(symbols).map(([symbol, address]) => (
+                <Dropdown.Item key={address} eventKey={symbol}>
+                  {symbol}
+                </Dropdown.Item>
+              ))}
             </Dropdown.Menu>
           </StyledDropdown>
         </TokenInfoContainer>
 
-        {/* OUTPUT TOKEN */}
         <TokenInfoContainer>
           <InputField
             type="text"
@@ -187,8 +237,14 @@ const Swap: React.FC = () => {
             value={outputAmount === "0" ? "" : outputAmount}
             disabled
           />
-          <StyledDropdown onSelect={(token) => handleTokenSelection("output", token!)}>
-            <Dropdown.Toggle>{outputToken ?? "Select token"}</Dropdown.Toggle>
+          <StyledDropdown
+            onSelect={(token) =>
+              token && handleTokenSelection("output", token)
+            }
+          >
+            <Dropdown.Toggle>
+              {outputToken ? outputToken : "Select token"}
+            </Dropdown.Toggle>
             <Dropdown.Menu>
               {Array.from(symbols).map(([symbol, address]) => (
                 <Dropdown.Item key={address} eventKey={symbol}>
@@ -201,12 +257,17 @@ const Swap: React.FC = () => {
 
         <ExchangeRateText>Exchange Rate: {price}</ExchangeRateText>
 
-        {/* SWAP / CONNECT */}
         {account ? (
           isSwapping ? (
             <SwapButton variant="primary" disabled>
-              <Spinner animation="grow" size="sm" role="status" />
-              {" "}Swapping ...
+              <Spinner
+                as="span"
+                animation="grow"
+                size="sm"
+                role="status"
+                aria-hidden="true"
+              />{" "}
+              Swapping ...
             </SwapButton>
           ) : (
             <SwapButton onClick={swapHandler}>Swap</SwapButton>
@@ -216,13 +277,27 @@ const Swap: React.FC = () => {
         )}
       </SwapContainer>
 
-      {/* ALERTS */}
       {isSwapping ? (
-        <Alert message="Swap pending..." transactionHash={null} variant="info" setShowAlert={setShowAlert} />
+        <Alert
+          message={"Swap pending..."}
+          transactionHash={null}
+          variant={"info"}
+          setShowAlert={setShowAlert}
+        />
       ) : isSuccess && showAlert ? (
-        <Alert message="Swap Successful" transactionHash={transactionHash} variant="success" setShowAlert={setShowAlert} />
+        <Alert
+          message={"Swap Successful"}
+          transactionHash={transactionHash}
+          variant={"success"}
+          setShowAlert={setShowAlert}
+        />
       ) : !isSuccess && showAlert ? (
-        <Alert message="Swap Failed" transactionHash={null} variant="danger" setShowAlert={setShowAlert} />
+        <Alert
+          message={"Swap Failed"}
+          transactionHash={null}
+          variant={"danger"}
+          setShowAlert={setShowAlert}
+        />
       ) : null}
     </Container>
   );

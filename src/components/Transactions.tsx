@@ -5,10 +5,11 @@ interface Transaction {
   }
   
   interface TransactionsProps {
-    list: Transaction[];
+    list: any[]; // Ajuste o tipo real depois
   }
   
-  const Transactions: React.FC<TransactionsProps> = ({ list }) => (
+  const Transactions: React.FC<TransactionsProps> = ({ list }) => {
+    return (
     <ul>
       {list.map((tx) => (
         <li key={tx.hash}>
@@ -17,4 +18,5 @@ interface Transaction {
       ))}
     </ul>
   );
-  
+};
+  export default Transactions;
