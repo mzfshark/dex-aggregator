@@ -11,9 +11,10 @@ async function main() {
     // Deploy aggregator contract
     aggregator = await hre.ethers.deployContract("Aggregator",[
         [
-          config.UNISWAP.V2_ROUTER_02_ADDRESS,
+          config.VIPERSWAP.V2_ROUTER_02_ADDRESS,
           config.SUSHISWAP.V2_ROUTER_02_ADDRESS,
-       //   config.SMARTDEX.V2_ROUTER_02_ADDRESS
+          config.DFK.V2_ROUTER_02_ADDRESS,
+          config.DEFIRA.V2_ROUTER_02_ADDRESS
         ],
         2
       ])

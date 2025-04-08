@@ -3,8 +3,8 @@ const hre = require("hardhat");
 //const { ethers } = require('hardhat');
 
 // const config = require("../config.json");
-const DAI = '0x6B175474E89094C44Da98b954EedeAC495271d0F'
-const WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
+const DAI = '0xEf977d2f931C1978Db5F6747666fa1eACB0d0339'
+const WETH = "0xcF664087a5bB0237a0BAd6742852ec6c8d69A27a";
 const ERC20 = require("@openzeppelin/contracts/build/contracts/ERC20.json");
 
 const tokens = (n) => {
@@ -14,7 +14,7 @@ const tokens = (n) => {
 async function seed(){
 
     let account1, persona, weth, dai, transaction
-    const accountImpersonated = "0x57757E3D981446D585Af0D9Ae4d7DF6D64647806"
+    const accountImpersonated = "0xF59de020d650E69eF0755Bf37F3D16B80Ee132F5"
 
      const accounts  = await hre.ethers.getSigners()
      account1 = accounts[0]

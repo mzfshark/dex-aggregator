@@ -1,24 +1,13 @@
 {
-  "31337": {
+  "1666600000": {
     "aggregator": {
-      "address": "0x1B25157F05B25438441bF7CDe38A95A55ccf8E50"
+      "address": "0x06F4A5718EdbCE18632cBf8Cd470849aFdeFcCc2"
     },
     "dai": {
-      "address": "0x6B175474E89094C44Da98b954EedeAC495271d0F"
+      "address": "0xEf977d2f931C1978Db5F6747666fa1eACB0d0339"
     },
     "weth": {
-      "address": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
-    }
-  },
-  "1": {
-    "aggregator": {
-      "address": "0x52bad4a8584909895c22bdecf8dbf33314468fb0"
-    },
-    "dai": {
-      "address": "0x6B175474E89094C44Da98b954EedeAC495271d0F"
-    },
-    "weth": {
-      "address": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
+      "address": "0xcF664087a5bB0237a0BAd6742852ec6c8d69A27a"
     }
   }
 }
