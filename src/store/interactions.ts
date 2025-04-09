@@ -1,38 +1,38 @@
-import { ethers, providers } from 'ethers';
-import { formatUnits } from 'ethers/lib/utils';
-
+import { Web3Provider } from '@ethersproject/providers';
+import { Contract, Wallet, formatUnits, ZeroAddress, parseUnits } from 'ethers';
 import tokenList from '../lists/tokenList.json';
 import { Dispatch } from 'redux';
+
 import {
   setProvider,
   setNetwork,
   setAccount
 } from './reducers/provider';
+
 import {
   setSymbols,
   balancesLoaded
 } from './reducers/tokens';
+
 import {
-    setIsSwapping,
-    setIsSuccess,
-    setTransactionHash,
-  } from './slices/aggregatorSlice';
+  setIsSwapping,
+  setIsSuccess,
+  setTransactionHash,
+  setSwapFail
+} from './slices/aggregatorSlice';
 
 declare global {
   interface Window {
-    ethereum?: EthereumProvider ;
+    ethereum?: any;
   }
 }
 
-// --------------------------------------
-// Interface opcional para tipar o tokenList
 interface TokenInfo {
   address: string;
   symbol: string;
   decimals: number;
 }
 
-// ABI mínima para ERC20
 const ERC20_ABI = [
   'function symbol() view returns (string)',
   'function name() view returns (string)',
@@ -44,21 +44,19 @@ const ERC20_ABI = [
 // --------------------------------------
 // Cria dinamicamente um tokenMap a partir da tokenList
 export const createTokenMap = (
-  provider: ethers.providers.Provider
-): { [address: string]: ethers.Contract } => {
-  const tokenMap: Record<string, ethers.Contract> = {};
-
-  for (const token of tokenList as unknown as TokenInfo[]) {
-    tokenMap[token.address] = new ethers.Contract(token.address, ERC20_ABI, provider);
+  provider: Web3Provider
+): { [address: string]: Contract } => {
+  const tokenMap: Record<string, Contract> = {};
+  for (const token of tokenList as TokenInfo[]) {
+    tokenMap[token.address] = new Contract(token.address, ERC20_ABI, provider);
   }
-
   return tokenMap;
 };
 
 // --------------------------------------
 // PROVIDER
 export const loadProvider = (
-  provider: providers.Web3Provider,
+  provider: Web3Provider,
   dispatch: Dispatch
 ) => {
   dispatch(setProvider(provider));
@@ -68,12 +66,12 @@ export const loadProvider = (
 // --------------------------------------
 // NETWORK
 export const loadNetwork = async (
-  provider: providers.Web3Provider,
+  provider: Web3Provider,
   dispatch: Dispatch
 ) => {
-  const { chainId } = await provider.getNetwork();
-  dispatch(setNetwork(chainId.toString()));
-  return chainId;
+  const network = await provider.getNetwork();
+  dispatch(setNetwork(network.chainId.toString()));
+  return network.chainId;
 };
 
 // --------------------------------------
@@ -82,7 +80,7 @@ export const loadAccount = async (
   dispatch: Dispatch
 ) => {
   const accounts = await window.ethereum?.request({ method: 'eth_requestAccounts' });
-  const account = ethers.utils.getAddress(accounts[0]);
+  const account = accounts[0];
   dispatch(setAccount(account));
   return account;
 };
@@ -90,16 +88,14 @@ export const loadAccount = async (
 // --------------------------------------
 // TOKEN SYMBOLS
 export const loadTokens = async (
-  tokenMap: { [address: string]: ethers.Contract },
+  tokenMap: { [address: string]: Contract },
   dispatch: Dispatch
 ) => {
   const symbols: Record<string, string> = {};
-
   for (const [address, contract] of Object.entries(tokenMap)) {
     const symbol = await contract.symbol();
     symbols[address] = symbol;
   }
-
   dispatch(setSymbols(symbols));
   return symbols;
 };
@@ -107,18 +103,16 @@ export const loadTokens = async (
 // --------------------------------------
 // FETCH TOKENS (Thunk Style)
 export const fetchTokens = (
-  provider: providers.Web3Provider
+  provider: Web3Provider
 ) => {
   return async (dispatch: Dispatch) => {
     try {
       const symbols: Record<string, string> = {};
-
-      for (const token of tokenList as unknown as TokenInfo[]) {
-        const contract = new ethers.Contract(token.address, ERC20_ABI, provider);
+      for (const token of tokenList as TokenInfo[]) {
+        const contract = new Contract(token.address, ERC20_ABI, provider);
         const symbol = await contract.symbol();
         symbols[token.address] = symbol;
       }
-
       dispatch(setSymbols(symbols));
     } catch (error) {
       console.error('Erro ao carregar símbolos dos tokens:', error);
@@ -129,13 +123,13 @@ export const fetchTokens = (
 // --------------------------------------
 // LOAD BALANCES
 export const loadBalances = async (
-  tokenMap: { [address: string]: ethers.Contract },
+  tokenMap: { [address: string]: Contract },
   account: string,
   dispatch: Dispatch
 ) => {
   const balances: Record<string, string> = {};
 
-  for (const token of tokenList as unknown as TokenInfo[]) {
+  for (const token of tokenList as TokenInfo[]) {
     const contract = tokenMap[token.address];
     const rawBalance = await contract.balanceOf(account);
     balances[token.address] = formatUnits(rawBalance, token.decimals);
@@ -148,9 +142,9 @@ export const loadBalances = async (
 // --------------------------------------
 // SWAP
 export const swap = async (
-  provider: providers.Web3Provider,
-  tokenMap: { [address: string]: ethers.Contract },
-  aggregator: ethers.Contract,
+  provider: Web3Provider,
+  tokenMap: { [address: string]: Contract },
+  aggregator: Contract,
   path: string[],
   router: string,
   amount: string,
@@ -163,11 +157,13 @@ export const swap = async (
     dispatch(setIsSwapping(true));
 
     const signer = await provider.getSigner();
-    const fromToken = tokenMap[path[0]];
+    const fromToken = tokenMap[path[0]].connect(signer);
 
-    const tx1 = await fromToken.connect(signer).approve(aggregator.address, amount);
+    // approve
+    const tx1 = await fromToken.approve(aggregator.target, amount);
     await tx1.wait();
 
+    // swap
     const tx2 = await aggregator.connect(signer).swapOnUniswapFork(
       path,
       router,
@@ -178,7 +174,6 @@ export const swap = async (
     );
 
     await tx2.wait();
-
     dispatch(setIsSuccess(tx2.hash));
   } catch (error) {
     console.error('Erro no swap:', error);
