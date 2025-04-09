@@ -1,3 +1,4 @@
+
 import { ethers } from 'ethers'
 
 import {
@@ -34,7 +35,7 @@ export const loadNetwork = async (provider, dispatch) => {
 
 export const loadAccount = async (dispatch) => {
   const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
-  const account = ethers.getAddress(accounts[0])
+  const account = ethers.utils.getAddress(accounts[0])
   dispatch(setAccount(account))
 
   return account
@@ -44,17 +45,21 @@ export const loadAccount = async (dispatch) => {
 // LOAD CONTRACTS
 
 export const loadTokens = async (erc20s, dispatch) => {
-  console.log("load tokens called")
-  let symbols = new Map()
-  let i = 0
-  for (i=0; i < erc20s.length; i++){
-    symbols.set(await erc20s[i].symbol(), await erc20s[i].getAddress())
-  }
-  dispatch(setSymbols(symbols))
-  console.log('symbols:', symbols)
-  return symbols
+  console.log("load tokens called");
 
-}
+  const symbols = new Map();
+
+  for (let i = 0; i < erc20s.length; i++) {
+    const symbol = await erc20s[i].symbol();
+    const address = erc20s[i].address; // ✅ propriedade, não função
+    symbols.set(symbol, address);
+  }
+
+  dispatch(setSymbols(symbols));
+  console.log('symbols:', symbols);
+
+  return symbols;
+};
 
 
 // export const fetchTokens = (contracts) => {

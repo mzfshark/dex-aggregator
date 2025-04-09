@@ -6,7 +6,7 @@ import Dropdown from "react-bootstrap/Dropdown";
 
 import styles from "../styles/Theme.module.css";
 import logo from "../img/logo.png";
-import localhostIcon from "../img/icons8-local-network-32.png";
+import harmonyIcon from "../img/harmony.png";
 import sepoliaIcon from "../img/sepolia.png";
 import ethereumIcon from "../img/ethereum.png";
 
@@ -33,8 +33,8 @@ const Navigation = () => {
   const getNetworkIcon = (chainId) => {
     console.log("chainId", chainId);
     switch (chainId) {
-      case "0x31337":
-        return localhostIcon;
+      case "0x63564c40":
+        return harmonyIcon;
       case "0xaa36a7":
         return sepoliaIcon;
       case "0x1":
@@ -74,9 +74,9 @@ const Navigation = () => {
             )}
           </Dropdown.Toggle>
           <Dropdown.Menu>
-            <Dropdown.Item eventKey="0x7A69">
-              <img src={localhostIcon} alt="Localhost Icon" width="20" />{" "}
-              Localhost
+            <Dropdown.Item eventKey="0x63564c40">
+              <img src={harmonyIcon} alt="Harmony Icon" width="20" />{" "}
+              HArmony
             </Dropdown.Item>
             {/* <Dropdown.Item eventKey="0xaa36a7">
                       <img src={sepoliaIcon} alt="Sepolia Icon" width="20" /> Sepolia
