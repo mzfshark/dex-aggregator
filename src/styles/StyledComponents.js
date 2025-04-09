@@ -79,9 +79,22 @@ export const SwapButton = styled.button`
   cursor: pointer;
   transition: background-color 0.2s;
   font-weight: 600;
+  margin-top: 10px;
 
   &:hover {
     background-color: #005f9e;
+  }
+
+  &.link {
+    background: none;
+    color: #4ea1d3;
+    padding: 0;
+    font-size: 14px;
+    font-weight: normal;
+
+    &:hover {
+      text-decoration: underline;
+    }
   }
 `;
 
@@ -90,4 +103,41 @@ export const ExchangeRateText = styled.p`
   font-size: 16px;
   text-align: center;
   margin: 20px 0;
+`;
+
+export const TokenActionsRow = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+`;
+
+export const LabelText = styled.span`
+  color: #a1a4a8;
+  font-size: 14px;
+`;
+
+export const ActionText = styled.span`
+  color: #00bcd4;
+  cursor: pointer;
+  font-size: 14px;
+  margin-left: auto;
+  margin-right: 10px;
+  text-decoration: underline;
+  &:hover {
+    color: #00acc1;
+  }
+`;
+
+export const SwapDirectionText = styled.span`
+  display: block;
+  text-align: center;
+  color: #00bcd4;
+  cursor: pointer;
+  margin: 10px 0;
+  text-decoration: underline;
+  font-size: 14px;
+  &:hover {
+    color: #00acc1;
+  }
 `;

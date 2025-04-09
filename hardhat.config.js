@@ -1,12 +1,12 @@
-import { HardhatUserConfig } from 'hardhat/config'
-import '@nomicfoundation/hardhat-toolbox'
-import 'dotenv/config'
-import '@nomicfoundation/hardhat-verify'
-//import 'hardhat-blockscout-verify' // plugin opcional para Blockscout
+require('@nomicfoundation/hardhat-toolbox')
+require('@nomicfoundation/hardhat-verify')
+require('dotenv/config')
+// require('hardhat-blockscout-verify') // plugin opcional para Blockscout
 
 const privateKey = process.env.PKEY || ''
 
-const config: HardhatUserConfig = {
+/** @type import('hardhat/config').HardhatUserConfig */
+const config = {
   solidity: '0.8.18',
   defaultNetwork: 'hardhat',
   networks: {
@@ -42,4 +42,4 @@ const config: HardhatUserConfig = {
   }
 }
 
-export default config
+module.exports = config

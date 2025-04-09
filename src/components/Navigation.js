@@ -30,23 +30,19 @@ const Navigation = () => {
     });
   };
 
-  const getNetworkIcon = (chainId) => {
-    console.log("chainId", chainId);
-    switch (chainId) {
-      case "0x63564c40":
-        return harmonyIcon;
-      case "0xaa36a7":
-        return sepoliaIcon;
-      case "0x1":
-        return ethereumIcon;
-      default:
-        return null;
-    }
+  const NETWORKS = {
+    "0x63564c40": { name: "Harmony", icon: harmonyIcon },
+    "0xaa36a7": { name: "Sepolia", icon: sepoliaIcon },
+    "0x1": { name: "Ethereum", icon: ethereumIcon },
   };
-
-  const currentNetworkIcon = getNetworkIcon(
-    chainId ? `0x${chainId.toString(16)}` : `0`,
-  );
+  
+  const getNetworkData = (chainId) => {
+    const hexChainId = chainId ? `0x${chainId.toString(16)}` : "0x0";
+    return NETWORKS[hexChainId] || null;
+  };
+  
+  const currentNetwork = getNetworkData(chainId);
+ 
 
   return (
     <Navbar className={styles.customNavbar} expand="lg">
@@ -61,30 +57,42 @@ const Navigation = () => {
       </Navbar.Brand>
       <Tabs />
       <Navbar.Collapse className="justify-content-end">
-        <Dropdown onSelect={networkHandler}>
-          <Dropdown.Toggle variant="secondary" id="dropdown-basic">
-            {currentNetworkIcon ? (
+      <Dropdown onSelect={networkHandler}>
+        <Dropdown.Toggle variant="secondary" id="dropdown-basic">
+          {currentNetwork ? (
+            <>
               <img
-                src={currentNetworkIcon}
-                alt="Current Network Icon"
+                src={currentNetwork.icon}
+                alt={`${currentNetwork.name} Icon`}
                 width="20"
+                className="me-2"
               />
-            ) : (
-              "Select Network"
-            )}
-          </Dropdown.Toggle>
-          <Dropdown.Menu>
-            <Dropdown.Item eventKey="0x63564c40">
-              <img src={harmonyIcon} alt="Harmony Icon" width="20" /> HArmony
-            </Dropdown.Item>
-            {/* <Dropdown.Item eventKey="0xaa36a7">
-                      <img src={sepoliaIcon} alt="Sepolia Icon" width="20" /> Sepolia
-                  </Dropdown.Item> */}
-            <Dropdown.Item eventKey="0x1">
-              <img src={ethereumIcon} alt="Ethereum Icon" width="20" /> Ethereum
-            </Dropdown.Item>
-          </Dropdown.Menu>
-        </Dropdown>
+              {currentNetwork.name}
+            </>
+          ) : (
+            "Select Network"
+          )}
+        </Dropdown.Toggle>
+
+        <Dropdown.Menu>
+              <Dropdown.Item eventKey="0x63564c40">
+                <img src={harmonyIcon} alt="Harmony Icon" width="20" className="me-2" /> Harmony
+              </Dropdown.Item>
+
+              {/* Ative se quiser o Sepolia disponível */}
+              {/* 
+              <Dropdown.Item eventKey="0xaa36a7">
+                <img src={sepoliaIcon} alt="Sepolia Icon" width="20" className="me-2" /> Sepolia
+              </Dropdown.Item>
+              */}
+
+              <Dropdown.Item eventKey="0x1">
+                <img src={ethereumIcon} alt="Ethereum Icon" width="20" className="me-2" /> Ethereum
+              </Dropdown.Item>
+        </Dropdown.Menu>
+
+      </Dropdown>
+
         {account ? (
           <Navbar.Text className={styles.accountInfo}>
             <Blockies
