@@ -35,7 +35,7 @@ export const loadNetwork = async (provider, dispatch) => {
 
 export const loadAccount = async (dispatch) => {
   const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
-  const account = ethers.utils.getAddress(accounts[0])
+  const account = ethers.getAddress(accounts[0])
   dispatch(setAccount(account))
 
   return account

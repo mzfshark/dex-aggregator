@@ -29,7 +29,7 @@ export function ContractsProvider({ children })  {
 
   const fetchBlockChainData =  useCallback(async () => {
     // Initiate provider
-    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    const provider = new ethers.BrowserProvider(window.ethereum);
     console.log('fetchBlockChainData/provider', provider)
     loadProvider(provider, dispatch)
 

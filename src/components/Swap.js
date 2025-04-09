@@ -159,7 +159,7 @@ const Swap = () => {
       console.log("No input value provided"); // Log if no input value is provided
       return;
     }
-    const enteredAmount = ethers.utils.parseEther(e.target.value.toString());
+    const enteredAmount = ethers.parseEther(e.target.value.toString());
     console.log("Entered amount:", enteredAmount.toString()); // Log the entered amount
 
     // Set the input amount
@@ -208,7 +208,7 @@ const Swap = () => {
         setRouter(fetchBestDealResult[1]);
 
         // Set the output amount
-        let calculatedOutputAmount = ethers.utils.formatUnits(
+        let calculatedOutputAmount = ethers.formatUnits(
           fetchBestDealResult[0],
           18
         ); // Convert the result to a human-readable format
