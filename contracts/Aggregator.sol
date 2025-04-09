@@ -50,17 +50,17 @@ contract Aggregator {
         address[] memory _path,
         uint256 _amount
     ) public view returns (uint256 bestAmountOut, address bestRouter) {
-        if (_amount == 0) return (0, address(0));
+        if (_amount == 0 || _path.length < 2) return (0, address(0));
 
         uint lastHop = _path.length - 1;
         for (uint8 i = 0; i < whiteListedRouters.length; i++) {
-            uint256[] memory amounts = IUniswapV2Router02(whiteListedRouters[i]).getAmountsOut(
-                _amount,
-                _path
-            );
-            if (amounts[lastHop] > bestAmountOut) {
-                bestAmountOut = amounts[lastHop];
-                bestRouter = whiteListedRouters[i];
+            try IUniswapV2Router02(whiteListedRouters[i]).getAmountsOut(_amount, _path) returns (uint256[] memory amounts) {
+                if (amounts[lastHop] > bestAmountOut) {
+                    bestAmountOut = amounts[lastHop];
+                    bestRouter = whiteListedRouters[i];
+                }
+            } catch {
+                // ignora routers que não retornam amounts
             }
         }
     }

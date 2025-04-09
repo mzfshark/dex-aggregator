@@ -1,7 +1,9 @@
 import { HardhatUserConfig } from 'hardhat/config'
 import '@nomicfoundation/hardhat-toolbox'
 import 'dotenv/config'
-import '@nomicfoundation/hardhat-verify'
+// import '@nomiclabs/hardhat-ethers'; // ethers@5
+
+import '@nomicfoundation/hardhat-verify' // ethers@6
 //import 'hardhat-blockscout-verify' // plugin opcional para Blockscout
 
 const privateKey = process.env.PKEY || ''
