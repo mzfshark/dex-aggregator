@@ -16,7 +16,10 @@ import {
   ExchangeRateText,
   TokenActionsRow,
   LabelText,
-  ActionText,           
+  InputWrapper,
+  MaxButton,
+  InputSlipageField,
+  BalanceText,
   SwapDirectionText    
 } from "../styles/StyledComponents";
 import { ContractsContext } from "./ContractContext";
@@ -213,17 +216,20 @@ const Swap = () => {
   return (
     <Container>
       <SwapContainer>
+        {/* INPUT TOKEN BLOCK */}
         <TokenInfoContainer>
-          <InputField
-            id="input-amount"
-            type="text"
-            placeholder="0"
-            onChange={handleInputChange}
-            disabled={!outputToken || !inputToken}
-          />
-          <StyledDropdown
-            onSelect={(token) => handleTokenSelection("input", token)}
-          >
+          <InputWrapper>
+            <InputField
+              id="input-amount"
+              type="text"
+              placeholder="0"
+              onChange={handleInputChange}
+              disabled={!outputToken || !inputToken}
+            />
+            <MaxButton onClick={useMaxAmount}>Max</MaxButton>
+          </InputWrapper>
+
+          <StyledDropdown onSelect={(token) => handleTokenSelection("input", token)}>
             <Dropdown.Toggle>{inputToken || "Select token"}</Dropdown.Toggle>
             <Dropdown.Menu>
               {symbols && Array.from(symbols).map(([symbol, address]) => (
@@ -233,24 +239,23 @@ const Swap = () => {
               ))}
             </Dropdown.Menu>
           </StyledDropdown>
-          <TokenActionsRow>
-            <LabelText>Balance: {balance}</LabelText>
-            <ActionText onClick={useMaxAmount}>Use Max Amount</ActionText> {/* ← modificado */}
-          </TokenActionsRow>
         </TokenInfoContainer>
-  
-        <SwapDirectionText onClick={swapTokens}>Swap Tokens ⮂</SwapDirectionText> {/* ← modificado */}
-  
+
+        <BalanceText>Balance: {balance}</BalanceText>
+        <SwapDirectionText onClick={swapTokens}>⮂</SwapDirectionText>
+
+        {/* OUTPUT TOKEN BLOCK */}
         <TokenInfoContainer>
-          <InputField
-            type="text"
-            placeholder="0"
-            value={outputAmount === "0" ? "" : outputAmount}
-            disabled
-          />
-          <StyledDropdown
-            onSelect={(token) => handleTokenSelection("output", token)}
-          >
+          <InputWrapper>
+            <InputField
+              type="text"
+              placeholder="0"
+              value={outputAmount === "0" ? "" : outputAmount}
+              disabled
+            />
+          </InputWrapper>
+
+          <StyledDropdown onSelect={(token) => handleTokenSelection("output", token)}>
             <Dropdown.Toggle>{outputToken || "Select token"}</Dropdown.Toggle>
             <Dropdown.Menu>
               {symbols && Array.from(symbols).map(([symbol, address]) => (
@@ -261,12 +266,13 @@ const Swap = () => {
             </Dropdown.Menu>
           </StyledDropdown>
         </TokenInfoContainer>
-  
+
         <ExchangeRateText>Exchange Rate: {price}</ExchangeRateText>
-  
+
+        {/* SLIPPAGE FIELD */}
         <TokenActionsRow>
           <LabelText>Slippage (%)</LabelText>
-          <InputField
+          <InputSlipageField
             type="number"
             min="0"
             step="0.1"
@@ -275,7 +281,8 @@ const Swap = () => {
             style={{ maxWidth: "80px" }}
           />
         </TokenActionsRow>
-  
+
+        {/* SWAP BUTTON */}
         {account ? (
           isSwapping ? (
             <SwapButton variant="primary" disabled>
@@ -288,30 +295,17 @@ const Swap = () => {
           <SwapButton onClick={connectHandler}>Connect Wallet</SwapButton>
         )}
       </SwapContainer>
-  
+
+      {/* ALERTS */}
       {isSwapping ? (
-        <Alert
-          message="Swap pending..."
-          transactionHash={null}
-          variant="info"
-          setShowAlert={setShowAlert}
-        />
+        <Alert message="Swap pending..." transactionHash={null} variant="info" setShowAlert={setShowAlert} />
       ) : isSuccess && showAlert ? (
-        <Alert
-          message="Swap Successful"
-          transactionHash={transactionHash}
-          variant="success"
-          setShowAlert={setShowAlert}
-        />
+        <Alert message="Swap Successful" transactionHash={transactionHash} variant="success" setShowAlert={setShowAlert} />
       ) : !isSuccess && showAlert ? (
-        <Alert
-          message="Swap Failed"
-          transactionHash={null}
-          variant="danger"
-          setShowAlert={setShowAlert}
-        />
+        <Alert message="Swap Failed" transactionHash={null} variant="danger" setShowAlert={setShowAlert} />
       ) : null}
     </Container>
+
   );
 };
 

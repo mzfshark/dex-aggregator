@@ -10,12 +10,29 @@ export const Container = styled.div`
 `;
 
 export const InputField = styled.input`
-  width: 60%;
+  width: 100%;
   background: #272f3e;
   border: none;
   border-radius: 10px;
   color: #fff;
-  padding: 10px;
+  padding: 0.75rem 3rem 0.75rem 1rem; 
+  font-size: 16px;
+  margin-right: 10px;
+  &:focus {
+    outline: none;
+  }
+  ::placeholder {
+    color: #a1a4a8;
+  }
+`;
+
+export const InputSlipageField = styled.input`
+  width: 100%;
+  background: #272f3e;
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  padding: 4px; 
   font-size: 16px;
   margin-right: 10px;
   &:focus {
@@ -105,11 +122,17 @@ export const ExchangeRateText = styled.p`
   margin: 20px 0;
 `;
 
+export const BalanceText = styled.p`
+  color: #a1a4a8;
+  font-size: 16px;
+  text-align: center;
+  margin: 20px 0;
+`;
+
 export const TokenActionsRow = styled.div`
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-top: 10px;
+  margin-top: 4px;
 `;
 
 export const LabelText = styled.span`
@@ -117,15 +140,24 @@ export const LabelText = styled.span`
   font-size: 14px;
 `;
 
-export const ActionText = styled.span`
-  color: #00bcd4;
+export const InputWrapper = styled.div`
+  position: relative;
+  width: 100%;
+`;
+
+export const MaxButton = styled.span`
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: #4a90e2;
   cursor: pointer;
-  font-size: 14px;
-  margin-left: auto;
-  margin-right: 10px;
-  text-decoration: underline;
+  user-select: none;
+
   &:hover {
-    color: #00acc1;
+    color: #357ab8;
   }
 `;
 
@@ -135,7 +167,7 @@ export const SwapDirectionText = styled.span`
   color: #00bcd4;
   cursor: pointer;
   margin: 10px 0;
-  text-decoration: underline;
+  text-decoration: none;
   font-size: 14px;
   &:hover {
     color: #00acc1;
