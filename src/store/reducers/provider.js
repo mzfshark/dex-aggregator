@@ -1,25 +1,25 @@
-import { createSlice } from '@reduxjs/toolkit'
+import { createSlice } from "@reduxjs/toolkit";
 
 export const provider = createSlice({
-  name: 'provider',
+  name: "provider",
   initialState: {
     connection: null,
     chainId: null,
-    account: null
+    account: null,
   },
   reducers: {
     setProvider: (state, action) => {
-      state.connection = action.payload
+      state.connection = action.payload;
     },
     setNetwork: (state, action) => {
-      state.chainId = action.payload
+      state.chainId = action.payload;
     },
     setAccount: (state, action) => {
-      state.account = action.payload
-    }
-  }
-})
+      state.account = action.payload;
+    },
+  },
+});
 
-export const {  setProvider, setNetwork, setAccount } = provider.actions;
+export const { setProvider, setNetwork, setAccount } = provider.actions;
 
 export default provider.reducer;

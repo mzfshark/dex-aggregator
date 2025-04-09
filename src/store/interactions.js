@@ -1,45 +1,41 @@
+import { ethers } from "ethers";
 
-import { ethers } from 'ethers'
-
-import {
-  setProvider,
-  setNetwork,
-  setAccount
-} from './reducers/provider'
+import { setProvider, setNetwork, setAccount } from "./reducers/provider";
 
 import {
   setSymbols,
   //balancesLoaded
-} from './reducers/tokens'
+} from "./reducers/tokens";
 
 import {
   // swapsLoaded,
   setIsSwapping,
   setSwapSuccess,
-  setSwapFail
-} from './reducers/aggregator'
-
+  setSwapFail,
+} from "./reducers/aggregator";
 
 export const loadProvider = (provider, dispatch) => {
-  dispatch(setProvider(provider))
+  dispatch(setProvider(provider));
 
-  return provider
-}
+  return provider;
+};
 
 export const loadNetwork = async (provider, dispatch) => {
-  const { chainId } = await provider.getNetwork()
-  dispatch(setNetwork(chainId.toString()))
+  const { chainId } = await provider.getNetwork();
+  dispatch(setNetwork(chainId.toString()));
 
-  return chainId
-}
+  return chainId;
+};
 
 export const loadAccount = async (dispatch) => {
-  const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
-  const account = ethers.getAddress(accounts[0])
-  dispatch(setAccount(account))
+  const accounts = await window.ethereum.request({
+    method: "eth_requestAccounts",
+  });
+  const account = ethers.getAddress(accounts[0]);
+  dispatch(setAccount(account));
 
-  return account
-}
+  return account;
+};
 
 // ------------------------------------------------------------------------------
 // LOAD CONTRACTS
@@ -56,11 +52,10 @@ export const loadTokens = async (erc20s, dispatch) => {
   }
 
   dispatch(setSymbols(symbols));
-  console.log('symbols:', symbols);
+  console.log("symbols:", symbols);
 
   return symbols;
 };
-
 
 // export const fetchTokens = (contracts) => {
 //   return async dispatch => {
@@ -73,7 +68,6 @@ export const loadTokens = async (erc20s, dispatch) => {
 //     }
 //   };
 // };
-
 
 // ------------------------------------------------------------------------------
 // LOAD BALANCES
@@ -91,37 +85,74 @@ export const loadTokens = async (erc20s, dispatch) => {
 
 // ------------------------------------------------------------------------------
 // SWAP
+export const swap = async (
+  provider,
+  contracts,
+  path,
+  router,
+  amount,
+  minAmountOut,
+  slippage,
+  deadline,
+  dispatch,
+) => {
+  try {
+    dispatch(setIsSwapping(true));
 
- export const swap = async (provider, contracts, path, router, amount, minAmountOut, slippage, deadline, dispatch) => {
+    // VALIDATIONS ----------------------------------------------------------
+    if (!provider) throw new Error("Provider não definido.");
+    if (!contracts || !contracts.dai || !contracts.aggregator) {
+      throw new Error("Contratos não definidos corretamente.");
+    }
+    if (
+      !path ||
+      !Array.isArray(path) ||
+      path.length < 2 ||
+      !path[0] ||
+      !path[1]
+    ) {
+      throw new Error("Caminho inválido (path).");
+    }
+    if (!router) throw new Error("Router está vazio ou nulo.");
+    if (!amount) throw new Error("Quantidade (amount) inválida.");
+    if (!minAmountOut) throw new Error("minAmountOut inválido.");
+    if (!slippage && slippage !== 0) throw new Error("Slippage não definido.");
+    if (!deadline) throw new Error("Deadline não definido.");
 
-  try{
-     dispatch(setIsSwapping(true))
+    console.log(">>> swap() params:");
+    console.log("path:", path);
+    console.log("router:", router);
+    console.log("amount:", amount);
+    console.log("minAmountOut:", minAmountOut);
 
-     let transaction
-     const signer = await provider.getSigner()
+    const signer = await provider.getSigner();
 
-     transaction = await contracts.dai.connect(signer).approve(contracts.aggregator.getAddress(), amount)
-     await transaction.wait()
+    // APPROVE
+    const aggregatorAddress = await contracts.aggregator.getAddress();
+    const approveTx = await contracts.dai
+      .connect(signer)
+      .approve(aggregatorAddress, amount);
+    await approveTx.wait();
 
-     transaction = await contracts.aggregator.connect(signer)
-       .swapOnUniswapFork(
+    // SWAP
+    const swapTx = await contracts.aggregator
+      .connect(signer)
+      .swapOnUniswapFork(
         path,
         router,
         amount,
         minAmountOut,
         slippage,
-        deadline
-        )
+        deadline,
+      );
 
-     await transaction.wait()
-
-     dispatch(setSwapSuccess(transaction.hash))
-
+    await swapTx.wait();
+    dispatch(setSwapSuccess(swapTx.hash));
   } catch (error) {
-    dispatch(setSwapFail())
+    console.error("Erro no swap:", error);
+    dispatch(setSwapFail());
   }
-}
-
+};
 
 // ------------------------------------------------------------------------------
 // LOAD ALL SWAPS

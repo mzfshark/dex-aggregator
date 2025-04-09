@@ -1,17 +1,17 @@
-import styled from 'styled-components';
-import Dropdown from 'react-bootstrap/Dropdown';
+import styled from "styled-components";
+import Dropdown from "react-bootstrap/Dropdown";
 
 export const Container = styled.div`
   display: flex;
   justify-content: center;
   align-items: center;
   height: 100vh;
-  background-color: #12171F;
+  background-color: #12171f;
 `;
 
 export const InputField = styled.input`
   width: 60%;
-  background: #272F3E;
+  background: #272f3e;
   border: none;
   border-radius: 10px;
   color: #fff;
@@ -28,7 +28,7 @@ export const InputField = styled.input`
 
 export const SwapContainer = styled.div`
   width: 400px;
-  background: #1D2532;
+  background: #1d2532;
   padding: 20px;
   border-radius: 15px;
   box-shadow: 0px 0px 25px rgba(0, 0, 0, 0.2);
@@ -45,7 +45,7 @@ export const TokenSelector = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #272F3E;
+  background: #272f3e;
   padding: 10px;
   border-radius: 10px;
   margin-bottom: 20px;
@@ -58,7 +58,7 @@ export const TokenText = styled.p`
 
 export const StyledDropdown = styled(Dropdown)`
   .dropdown-toggle {
-    background-color: #272F3E;
+    background-color: #272f3e;
     border: none;
     color: #fff;
     &:focus {
@@ -90,4 +90,4 @@ export const ExchangeRateText = styled.p`
   font-size: 16px;
   text-align: center;
   margin: 20px 0;
-  `;
+`;

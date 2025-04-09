@@ -1,17 +1,17 @@
-import { configureStore } from '@reduxjs/toolkit'
+import { configureStore } from "@reduxjs/toolkit";
 
-import provider from './reducers/provider'
-import tokens from './reducers/tokens'
-import aggregator from './reducers/aggregator'
+import provider from "./reducers/provider";
+import tokens from "./reducers/tokens";
+import aggregator from "./reducers/aggregator";
 
 export const store = configureStore({
   reducer: {
     provider,
     tokens,
-    aggregator
+    aggregator,
   },
-  middleware: getDefaultMiddleware =>
+  middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
-      serializableCheck: false
-    })
-})
+      serializableCheck: false,
+    }),
+});

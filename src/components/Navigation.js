@@ -45,7 +45,7 @@ const Navigation = () => {
   };
 
   const currentNetworkIcon = getNetworkIcon(
-    chainId ? `0x${chainId.toString(16)}` : `0`
+    chainId ? `0x${chainId.toString(16)}` : `0`,
   );
 
   return (
@@ -75,8 +75,7 @@ const Navigation = () => {
           </Dropdown.Toggle>
           <Dropdown.Menu>
             <Dropdown.Item eventKey="0x63564c40">
-              <img src={harmonyIcon} alt="Harmony Icon" width="20" />{" "}
-              HArmony
+              <img src={harmonyIcon} alt="Harmony Icon" width="20" /> HArmony
             </Dropdown.Item>
             {/* <Dropdown.Item eventKey="0xaa36a7">
                       <img src={sepoliaIcon} alt="Sepolia Icon" width="20" /> Sepolia

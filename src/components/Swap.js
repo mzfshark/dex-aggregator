@@ -18,30 +18,28 @@ import {
 import { ContractsContext } from "./ContractContext";
 
 const Swap = () => {
-  console.log("Swap component re-rendered");
   const contracts = useContext(ContractsContext);
+
   const [inputToken, setInputToken] = useState(null);
   const [outputToken, setOutputToken] = useState(null);
-  const [inputAmount, setInputAmount] = useState(0);
-  const [outputAmount, setOutputAmount] = useState(0);
-  const [bestDeal, setBestDeal] = useState(null);
+  const [inputAmount, setInputAmount] = useState(0n);
+  const [outputAmount, setOutputAmount] = useState("0");
+  const [bestDeal, setBestDeal] = useState(0n);
   const [router, setRouter] = useState(null);
   const [path, setPath] = useState([]);
-  const [price, setPrice] = useState(0);
+  const [price, setPrice] = useState("0");
   const [showAlert, setShowAlert] = useState(false);
 
   const provider = useSelector((state) => state.provider.connection);
   const account = useSelector((state) => state.provider.account);
   const isSwapping = useSelector(
-    (state) => state.aggregator.swapping.isSwapping
+    (state) => state.aggregator.swapping.isSwapping,
   );
   const isSuccess = useSelector((state) => state.aggregator.swapping.isSuccess);
   const transactionHash = useSelector(
-    (state) => state.aggregator.swapping.transactionHash
+    (state) => state.aggregator.swapping.transactionHash,
   );
-
   const symbols = useSelector((state) => state.tokens.symbols);
-  // const balances = useSelector(state => state.tokens.balances)
   const dispatch = useDispatch();
 
   const connectHandler = async () => {
@@ -50,175 +48,106 @@ const Swap = () => {
 
   const swapHandler = async (e) => {
     e.preventDefault();
-
-    if (inputToken === outputToken) {
+    if (!inputToken || !outputToken || inputToken === outputToken) {
       window.alert("Invalid Token Pair");
       return;
     }
 
-    // const _inputAmount = ethers.parseUnits(inputAmount, 'ether')
-
     const deadline = Math.floor(Date.now() / 1000) + 60 * 20;
     const slippage = 0;
-
-    console.log(
-      //contracts.aggregator,
-      provider,
-      path,
-      router,
-      inputAmount,
-      bestDeal,
-      slippage,
-      deadline
-    );
 
     await swap(
       provider,
       contracts,
       path,
       router,
-      inputAmount,
-      bestDeal,
+      inputAmount.toString(),
+      bestDeal.toString(),
       slippage,
       deadline,
-      dispatch
-    );
-
-    console.log(
-      //contracts.aggregator,
-      provider,
-      path,
-      router,
-      inputAmount,
-      bestDeal,
-      slippage,
-      deadline
+      dispatch,
     );
 
     setShowAlert(true);
   };
 
-  const getPrice = async () => {
-    console.log("getPrice/inputAmount", inputAmount);
-    if (inputToken === outputToken) {
-      setPrice(0);
-    }
-    if (inputAmount === "0") {
-      setPrice("N/A");
+  const getPrice = () => {
+    if (
+      !inputToken ||
+      !outputToken ||
+      inputToken === outputToken ||
+      inputAmount === 0n
+    ) {
+      setPrice("0");
       return;
     }
 
-    if (outputAmount && inputAmount) {
-      const price = Number(bestDeal) / Number(inputAmount);
-      setPrice(price.toString());
+    try {
+      const rate = (bestDeal * 10n ** 18n) / inputAmount;
+      const formattedRate = ethers.formatUnits(rate, 18);
+      setPrice(formattedRate);
+    } catch (err) {
+      setPrice("0");
     }
   };
 
-  // TODO: display network fee
-  // const getNetworkFee = async () => {
-  // }
-
   const handleTokenSelection = (type, token) => {
-    console.log("handleTokenSelection:type/token:", type, "/", token);
-    if (type === "input") {
-      console.log(
-        "handleTokenSelection/setInputToken inputToken/outputToken",
-        inputToken,
-        outputToken
-      );
-
-      setInputToken(token);
-    } else {
-      console.log(
-        "handleTokenSelection/setOutputToken inputToken/outputToken",
-        inputToken,
-        outputToken
-      );
-      setOutputToken(token);
-    }
-    console.log(
-      "handleTokenSelection inputToken/outputToken",
-      inputToken,
-      outputToken
-    );
-    if (inputToken && outputToken && inputToken !== outputToken) {
-      setPath([symbols.get(inputToken), symbols.get(outputToken)]);
-    }
-    if (inputToken && outputToken && inputToken === outputToken) {
-      setPath([]);
-      // You can also set a state for the alert message to give users more context
-    }
+    if (type === "input") setInputToken(token);
+    else setOutputToken(token);
   };
 
   const handleInputChange = async (e) => {
-    console.log("handleInputChange triggered"); // Log when the function is triggered
+    const val = e.target.value.trim();
 
-    if (!e.target.value) {
+    if (!val || isNaN(val)) {
+      setInputAmount(0n);
       setOutputAmount("0");
-      setInputAmount("0");
-      console.log("No input value provided"); // Log if no input value is provided
       return;
     }
-    const enteredAmount = ethers.parseEther(e.target.value.toString());
-    console.log("Entered amount:", enteredAmount.toString()); // Log the entered amount
 
-    // Set the input amount
-    setInputAmount(enteredAmount.toString());
-
-    // Check to make sure the tokens are set before attempting to convert
     if (!inputToken || !outputToken) {
       alert("Please select both input and output tokens.");
-      console.log("Input or output token not selected"); // Log if tokens are not selected
       return;
     }
 
-    // Ensure the input token isn't the same as the output token
     if (inputToken === outputToken) {
       alert("Input and output tokens cannot be the same");
-      console.log("Input and output tokens are the same"); // Log if input and output tokens are the same
       return;
     }
 
-    // The logic for setting the path and fetching the best deal
-    // has been moved to useEffect hooks.
+    const decimals = await contracts[inputToken.toLowerCase()].decimals();
+    const parsedAmount = ethers.parseUnits(val, decimals);
+    setInputAmount(parsedAmount);
   };
 
-  // Effect to update the path whenever inputToken or outputToken changes
   useEffect(() => {
     if (inputToken && outputToken && inputToken !== outputToken) {
       setPath([symbols.get(inputToken), symbols.get(outputToken)]);
-    }
-    if (inputToken && outputToken && inputToken === outputToken) {
+    } else {
       setPath([]);
     }
   }, [inputToken, outputToken, symbols]);
 
-  // Effect to call getBestAmountsOutOnUniswapForks whenever path or inputAmount changes
   useEffect(() => {
     const fetchBestDeal = async () => {
-      if (path.length === 2 && inputAmount) {
-        // try {
-        const fetchBestDealResult =
-          await contracts.aggregator.getBestAmountsOutOnUniswapForks(
-            path,
-            inputAmount
-          );
-        console.log("fetchBestDealResult:", fetchBestDealResult);
-        setBestDeal(fetchBestDealResult[0]);
-        setRouter(fetchBestDealResult[1]);
+      if (path.length === 2 && inputAmount > 0n) {
+        try {
+          const [amountOut, selectedRouter] =
+            await contracts.aggregator.getBestAmountsOutOnUniswapForks(
+              path,
+              inputAmount.toString(),
+            );
 
-        // Set the output amount
-        let calculatedOutputAmount = ethers.formatUnits(
-          fetchBestDealResult[0],
-          18
-        ); // Convert the result to a human-readable format
-        setOutputAmount(parseFloat(calculatedOutputAmount).toFixed(2)); // Update the outputAmount state
+          setBestDeal(BigInt(amountOut));
+          setRouter(selectedRouter);
 
-        // } catch (error) {
-        //     console.error('Error fetching best deal:', error);
-        // }
-      } else {
-        console.log("path.length/inputAmout", path.length, inputAmount);
+          const formatted = ethers.formatUnits(amountOut, 18);
+          setOutputAmount(parseFloat(formatted).toFixed(2));
+        } catch (error) {
+          console.error("Error fetching best deal:", error);
+          setBestDeal(0n);
+          setOutputAmount("0");
+        }
       }
     };
     fetchBestDeal();
@@ -226,7 +155,7 @@ const Swap = () => {
 
   useEffect(() => {
     getPrice();
-  }, [inputAmount, inputToken, outputToken, bestDeal]);
+  }, [inputAmount, bestDeal]);
 
   return (
     <Container>
@@ -242,9 +171,7 @@ const Swap = () => {
           <StyledDropdown
             onSelect={(token) => handleTokenSelection("input", token)}
           >
-            <Dropdown.Toggle>
-              {inputToken ? inputToken : "Select token"}
-            </Dropdown.Toggle>
+            <Dropdown.Toggle>{inputToken || "Select token"}</Dropdown.Toggle>
             <Dropdown.Menu>
               {Array.from(symbols).map(([symbol, address]) => (
                 <Dropdown.Item key={address} eventKey={symbol}>
@@ -260,15 +187,13 @@ const Swap = () => {
             type="text"
             placeholder="0"
             min="0.0"
-            value={outputAmount === 0 ? "" : outputAmount}
-            disabled={true} // to conditionally disable, replace true with condition
+            value={outputAmount === "0" ? "" : outputAmount}
+            disabled={true}
           />
           <StyledDropdown
             onSelect={(token) => handleTokenSelection("output", token)}
           >
-            <Dropdown.Toggle>
-              {outputToken ? outputToken : "Select token"}
-            </Dropdown.Toggle>
+            <Dropdown.Toggle>{outputToken || "Select token"}</Dropdown.Toggle>
             <Dropdown.Menu>
               {Array.from(symbols).map(([symbol, address]) => (
                 <Dropdown.Item key={address} eventKey={symbol}>
@@ -300,25 +225,26 @@ const Swap = () => {
           <SwapButton onClick={connectHandler}>Connect Wallet</SwapButton>
         )}
       </SwapContainer>
+
       {isSwapping ? (
         <Alert
-          message={"Swap pending..."}
+          message="Swap pending..."
           transactionHash={null}
-          variant={"info"}
+          variant="info"
           setShowAlert={setShowAlert}
         />
       ) : isSuccess && showAlert ? (
         <Alert
-          message={"Swap Successful"}
+          message="Swap Successful"
           transactionHash={transactionHash}
-          variant={"success"}
+          variant="success"
           setShowAlert={setShowAlert}
         />
       ) : !isSuccess && showAlert ? (
         <Alert
-          message={"Swap Failed"}
+          message="Swap Failed"
           transactionHash={null}
-          variant={"danger"}
+          variant="danger"
           setShowAlert={setShowAlert}
         />
       ) : null}

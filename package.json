@@ -2,6 +2,64 @@
   "name": "dex_aggregator",
   "version": "2.0.0",
   "description": "",
+  "author": "github@gregs.io",
+  "license": "MIT",
+
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject",
+    "deploy:bsc": "npx hardhat run scripts/deploy.ts --network bsc",
+    "deploy:harmony": "npx hardhat run scripts/deploy.ts --network harmony",
+    "hardhat-test": "npx hardhat test",
+    "lint": "eslint ./src --ext .js,.jsx,.ts,.tsx",
+    "lint:fix": "eslint ./src --ext .js,.jsx,.ts,.tsx --fix",
+    "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,json,css,scss,md}\""
+  },
+
+  "eslintConfig": {
+    "env": {
+      "browser": true,
+      "es2020": true
+    },
+    "extends": [
+      "react-app",
+      "react-app/jest",
+      "eslint:recommended",
+      "plugin:react/recommended",
+      "plugin:react-hooks/recommended",
+      "plugin:prettier/recommended"
+    ],
+    "plugins": ["react", "react-hooks", "prettier"],
+    "rules": {
+      "prettier/prettier": "warn",
+      "no-undef": "off", 
+      "react/react-in-jsx-scope": "off"
+    },
+    "globals": {
+      "BigInt": true 
+    },
+    "settings": {
+      "react": {
+        "version": "detect"
+      }
+    }
+  },
+
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+
   "dependencies": {
     "@openzeppelin/contracts": "^4.9.3",
     "@reduxjs/toolkit": "^1.8.4",
@@ -30,35 +88,7 @@
     "tailwindcss": "^3.3.3",
     "web-vitals": "^2.1.4"
   },
-  "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject",
-    "deploy:bsc": "npx hardhat run scripts/deploy.ts --network bsc",
-    "deploy:harmony": "npx hardhat run scripts/deploy.ts --network harmony",
-    "hardhat-test": "npx hardhat test"
-  },
-  "author": "github@gregs.io",
-  "license": "MIT",
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
-  },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
-  },
+
   "devDependencies": {
     "@metamask/providers": "^21.0.0",
     "@nomicfoundation/hardhat-chai-matchers": "^2.0.8",
@@ -73,9 +103,15 @@
     "@types/node": "^22.14.0",
     "@types/react": "^19.1.0",
     "chai": "^4.5.0",
-    "ethers": "5",
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^10.1.1",
+    "eslint-plugin-prettier": "^5.2.6",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "ethers": "^6",
     "hardhat": "^2.17.0",
     "hardhat-gas-reporter": "^1.0.10",
+    "prettier": "^3.5.3",
     "solidity-coverage": "^0.8.14",
     "ts-node": "^10.9.2",
     "typechain": "^8.3.2",
