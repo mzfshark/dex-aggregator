@@ -1,37 +1,52 @@
-// We require the Hardhat Runtime Environment explicitly here. This is optional
-// but useful for running the script in a standalone fashion through `node <script>`.
-//
-// You can also run a script with `npx hardhat run <script>`. If you do that, Hardhat
-// will compile your contracts, add the Hardhat Runtime Environment's members to the
-// global scope, and execute the script.
-const hre = require("hardhat");
-const config = require("../config.json");
+import { ethers, run } from 'hardhat'
+import config from '../config.json'
 
 async function main() {
-    // Deploy aggregator contract
-    aggregator = await hre.ethers.deployContract("Aggregator",[
-        [
-          config.UNISWAP.V2_ROUTER_02_ADDRESS,
-          config.SUSHISWAP.V2_ROUTER_02_ADDRESS,
-       //   config.SMARTDEX.V2_ROUTER_02_ADDRESS
-        ],
-        2
-      ])
+  const Aggregator = await ethers.getContractFactory('Aggregator')
 
-    await aggregator.waitForDeployment()
+  const routerList = [
+    config.VIPERSWAP.V2_ROUTER_02_ADDRESS,
+    config.SUSHISWAP.V2_ROUTER_02_ADDRESS,
+    config.DFK.V2_ROUTER_02_ADDRESS,
+    config.DEFIRA.V2_ROUTER_02_ADDRESS,
+    config.SONICSWAP.V2_ROUTER_02_ADDRESS,
+  ]
 
+  const defaultSlippage = 20 // 2% (base 1000)
+  const gasLimit = 5_000_000 // ✅ agora com '=' ao invés de ':'
 
-    const { chainId } = await ethers.provider.getNetwork()
-
-    console.log(`
-        Aggregator deployed to: ${aggregator.target}
-        on network chainID: ${chainId}
-        \n`)
+  const aggregator = await Aggregator.deploy(
+    routerList,
+    defaultSlippage,
+    {
+      gasLimit // ✅ passa como objeto de opções
     }
+  )
 
-// We recommend this pattern to be able to use async/await everywhere
-// and properly handle errors.
+  await aggregator.waitForDeployment()
+
+  const address = await aggregator.getAddress()
+  const { chainId, name } = await ethers.provider.getNetwork()
+
+  console.log(`
+    ✅ Aggregator deployed to: ${address}
+    🌐 Network: ${name} (chainId: ${chainId})
+  `)
+
+  console.log('⌛ Waiting for 6 confirmations before verification...')
+  await aggregator.deploymentTransaction()?.wait(6)
+
+  console.log('🔍 Verifying contract on Etherscan...')
+  await run('verify:verify', {
+    address,
+    constructorArguments: [routerList, defaultSlippage],
+    contract: 'contracts/Aggregator.sol:Aggregator',
+  })
+
+  console.log('✅ Verification complete!')
+}
+
 main().catch((error) => {
-    console.error(error);
-    process.exitCode = 1;
-});
+  console.error(error)
+  process.exitCode = 1
+})
