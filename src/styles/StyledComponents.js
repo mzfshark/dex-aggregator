@@ -215,3 +215,13 @@ export const ConnectButton = styled.button`
   border-radius: 4px;
   cursor: pointer;
 `;
+
+export const DisconnectButton = styled.button`
+  background-color:rgba(0, 123, 255, 0);
+  border: none;
+  color: white;
+  padding: 1px;
+  font-weight: bold;
+  border-radius: 4px;
+  cursor: pointer;
+`;

@@ -9,7 +9,8 @@ import {
   Logo,
   AccountInfo,
   ConnectButton,
-  BalanceWrapper
+  BalanceWrapper,
+  DisconnectButton
 } from "../styles/StyledComponents";
 
 const Navigation = () => {
@@ -59,9 +60,9 @@ const Navigation = () => {
               <strong>{nativeBalance}</strong> ONE
             </BalanceWrapper>
             <span>{`${account.slice(0, 6)}...${account.slice(-4)}`}</span>
-            <ConnectButton onClick={disconnectWallet} style={{ marginLeft: "10px" }}>
+            <DisconnectButton onClick={disconnectWallet} style={{ marginLeft: "10px" }}>
               Disconnect
-            </ConnectButton>
+            </DisconnectButton>
           </AccountInfo>
         ) : (
           <ConnectButton onClick={connectWalletHandler}>

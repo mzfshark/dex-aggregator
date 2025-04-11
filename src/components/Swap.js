@@ -78,23 +78,32 @@ const Swap = () => {
   // Atualiza saldo do token selecionado
   const fetchBalance = useCallback(async () => {
     if (!account || !symbols || symbols.size === 0) return;
-  
+
     const newBalances = new Map();
-  
+
     for (const [symbol, contract] of symbols.entries()) {
       try {
+        if (symbol === "ONE") {
+          const balance = await provider.getBalance(account);
+          const formatted = ethers.formatEther(balance);
+          newBalances.set("ONE", truncateDecimals(formatted, 4));
+          continue; 
+        }
+
         const raw = await contract.balanceOf(account);
-        const decimals = await contract.decimals();
+        const decimals = symbol === "ONE" ? 18 : await contract.decimals();
+
         const formatted = ethers.formatUnits(raw, decimals);
         newBalances.set(symbol, truncateDecimals(formatted, 4));
       } catch (err) {
-        console.error(`Erro ao buscar saldo do token ${symbol}`, err);
+        console.error(`Erro ao buscar saldo do token ${symbol}:`, err);
         newBalances.set(symbol, "0");
       }
     }
-  
+
     setBalances(newBalances);
-  }, [account, symbols]);
+  }, [account, provider, symbols]);
+
   
   useEffect(() => {
     fetchBalance();
@@ -111,7 +120,7 @@ const Swap = () => {
     if (!contract || !account) return;
     try {
       const rawBalance = await contract.balanceOf(account);
-      const decimals = await contract.decimals();
+      const decimals = symbols === "ONE" ? 18 : await contract.decimals();
       setInputAmount(rawBalance);
       document.getElementById("input-amount").value = ethers.formatUnits(rawBalance, decimals);
     } catch (err) {
@@ -132,7 +141,7 @@ const Swap = () => {
     if (!contract) return;
 
     try {
-      const decimals = await contract.decimals();
+      const decimals = symbols === "ONE" ? 18 : await contract.decimals();
       const parsed = ethers.parseUnits(val, decimals);
       setInputAmount(parsed);
     } catch (err) {
@@ -233,9 +242,10 @@ const Swap = () => {
   // Execução do swap
   const swapHandler = async (e) => {
     e.preventDefault();
-    if (!inputToken || !outputToken || inputToken === outputToken || path.length < 2) {
-      alert("Selecione um par de tokens válido.");
-      return;
+    if (inputToken && outputToken && inputToken !== outputToken) {
+      const from = inputToken === "ONE" ? ethers.ZeroAddress : symbols.get(inputToken)?.target;
+      const to = outputToken === "ONE" ? ethers.ZeroAddress : symbols.get(outputToken)?.target;
+      if (from && to) setPath([from, to]);
     }
 
     const deadline = Math.floor(Date.now() / 1000) + 60 * 20;
