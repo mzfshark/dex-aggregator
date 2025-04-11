@@ -1,0 +1,23 @@
+[
+    {
+      "inputs": [
+        { "internalType": "string", "name": "symbol", "type": "string" }
+      ],
+      "name": "getReferenceData",
+      "outputs": [
+        {
+          "components": [
+            { "internalType": "uint256", "name": "rate", "type": "uint256" },
+            { "internalType": "uint256", "name": "last_updated_base", "type": "uint256" },
+            { "internalType": "uint256", "name": "last_updated_quote", "type": "uint256" }
+          ],
+          "internalType": "struct ReferenceData",
+          "name": "",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ]
+  

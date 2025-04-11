@@ -1,7 +1,26 @@
 // src/store/interactions.js
 import { ethers } from "ethers";
 import ERC20ABI from "../abis/ERC20.json";
-import tokenList from "../utils/loadTokens";
+import { getTokensByChainId } from "../utils/loadTokens";
+import { loadTokens as loadTokenContracts } from "./tokens";
+
+/**
+ * Carrega a lista de tokens da chain e instancia contratos ERC20
+ * @param {*} dispatch
+ * @param {*} provider
+ */
+export const loadTokens = async (dispatch, provider) => {
+  try {
+    const network = await provider.getNetwork();
+    const chainId = Number(network.chainId);
+    const tokenList = getTokensByChainId(chainId);
+    await loadTokenContracts(provider, tokenList, dispatch);
+  } catch (error) {
+    console.error("Erro ao carregar tokens:", error);
+  }
+};
+
+
 
 
 // Carrega conta e provider
@@ -9,27 +28,6 @@ export const loadAccount = async (dispatch) => {
   const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
   const account = ethers.getAddress(accounts[0]);
   dispatch({ type: "ACCOUNT_LOADED", account });
-};
-
-export const loadTokens = async (dispatch, provider) => {
-  try {
-    const response = await tokenList;
-    const data = await response.json(); 
-
-    const tokensMap = new Map();
-
-    for (const token of data.tokens) {
-      const tokenContract = new ethers.Contract(token.address, ERC20ABI, provider);
-      tokensMap.set(token.symbol, tokenContract);
-    }
-
-    dispatch({
-      type: "TOKENS_LOADED",
-      symbols: tokensMap,
-    });
-  } catch (error) {
-    console.error("Erro ao carregar lista de tokens:", error);
-  }
 };
 
 

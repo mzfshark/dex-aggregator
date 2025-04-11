@@ -12,6 +12,7 @@ import ERC20_ABI from "../abis/ERC20.json";
 export const fetchTokenBalance = async (token, provider, account) => {
   if (!token || !provider || !account) return "0";
 
+  
   try {
     // Se for token nativo (ONE)
     if (token.isNative || token.address === "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee") {
