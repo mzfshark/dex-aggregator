@@ -173,3 +173,45 @@ export const SwapDirectionText = styled.span`
     color: #00acc1;
   }
 `;
+
+export const Nav = styled.nav`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  background-color: #121212;
+  border-bottom: 1px solid #222;
+`;
+
+export const NavItem = styled.div`
+  display: flex;
+  align-items: center;
+`;
+
+export const Logo = styled.img`
+  height: 40px;
+  color: #fff;
+`;
+
+export const AccountInfo = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-family: monospace;
+  font-size: 0.9rem;
+  color: #fff;
+`;
+
+export const BalanceWrapper = styled.div`
+  margin-bottom: 4px;
+`;
+
+export const ConnectButton = styled.button`
+  background-color: #007bff;
+  border: none;
+  color: white;
+  padding: 0.5rem 1rem;
+  font-weight: bold;
+  border-radius: 4px;
+  cursor: pointer;
+`;

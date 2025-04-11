@@ -15,7 +15,8 @@
     "hardhat-test": "npx hardhat test",
     "lint": "eslint ./src --ext .js,.jsx,.ts,.tsx",
     "lint:fix": "eslint ./src --ext .js,.jsx,.ts,.tsx --fix",
-    "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,json,css,scss,md}\""
+    "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,json,css,scss,md}\"",
+    "link:tokenlist": "npm link  ./src/lists"
   },
 
   "eslintConfig": {
@@ -86,7 +87,8 @@
     "reselect": "^4.1.6",
     "styled-components": "^6.0.8",
     "tailwindcss": "^3.3.3",
-    "web-vitals": "^2.1.4"
+    "web-vitals": "^2.1.4",
+    "tokenList": "./src/lists"
   },
 
   "devDependencies": {

@@ -1,76 +1,59 @@
-// ContractsContext.js
-import React, { createContext, useCallback, useState, useEffect } from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
 import { ethers } from "ethers";
-import { useDispatch } from "react-redux";
-
-import DAI_ABI from "../abis/Dai.json";
-import WETH_ABI from "../abis/Weth.json";
-import AGGREGATOR_ABI from "../abis/Aggregator.json";
+import AggregatorABI from "../abis/Aggregator.json";
 import config from "../config.json";
 
-import {
-  loadProvider,
-  loadNetwork,
-  loadAccount,
-  loadTokens,
-  //   fetchTokens,
-  //   loadAggregator
-} from "../store/interactions";
+// Criação do contexto
+const ContractContext = createContext(null);
 
-export const ContractsContext = createContext();
+// Hook customizado para acesso ao contexto
+export const useContracts = () => useContext(ContractContext);
 
-export function ContractsProvider({ children }) {
+// Provider
+export const ContractProvider = ({ children }) => {
   const [contracts, setContracts] = useState({});
-  const dispatch = useDispatch();
-
-  const fetchBlockChainData = useCallback(async () => {
-    // Initiate provider
-    const provider = new ethers.BrowserProvider(window.ethereum);
-    console.log("fetchBlockChainData/provider", provider);
-    loadProvider(provider, dispatch);
-
-    // Fetch current network's chainId (e.g. hardhat: 31337, kovan: 42)
-    const chainId = await loadNetwork(provider, dispatch);
-
-    // Reload page when network changes
-    window.ethereum.on("chainChanged", () => {
-      window.location.reload();
-    });
-
-    // Fetch current account from Metamask when changed
-    window.ethereum.on("accountsChanged", async () => {
-      await loadAccount(dispatch);
-    });
-
-    const contractInstances = {
-      aggregator: new ethers.Contract(
-        config[chainId].aggregator.address,
-        AGGREGATOR_ABI,
-        provider,
-      ),
-      dai: new ethers.Contract(config[chainId].weth.address, DAI_ABI, provider),
-      weth: new ethers.Contract(
-        config[chainId].dai.address,
-        WETH_ABI,
-        provider,
-      ),
-    };
-
-    await loadTokens([contractInstances.dai, contractInstances.weth], dispatch);
-
-    return contractInstances;
-  }, [dispatch]);
+  const [provider, setProvider] = useState(null);
+  const [account, setAccount] = useState(null);
+  const [chainId, setChainId] = useState(null); 
 
   useEffect(() => {
-    fetchBlockChainData().then((contracts) => {
-      setContracts(contracts);
-      console.log("contracts", contracts);
-    });
-  }, [fetchBlockChainData]);
+    const init = async () => {
+      if (window.ethereum) {
+        const newProvider = new ethers.BrowserProvider(window.ethereum);
+        setProvider(newProvider);
+
+        const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+        setAccount(accounts[0]);
+
+        const { chainId } = await newProvider.getNetwork();
+        setChainId(chainId); // ✅ ISSO É O QUE FALTAVA
+
+        const aggregatorAddress = config[chainId.toString()]?.aggregator;
+
+        if (!aggregatorAddress) {
+          console.warn(`Endereço do contrato não encontrado para chainId ${chainId}`);
+          return;
+        }
+
+        const aggregator = new ethers.Contract(aggregatorAddress, AggregatorABI, newProvider);
+        setContracts({ aggregator });
+      }
+    };
+
+    init();
+  }, []);
+
+
+  const disconnectWallet = () => {
+    setAccount(null);
+    setProvider(null);
+    setChainId(null);
+    setContracts({});
+  };
 
   return (
-    <ContractsContext.Provider value={contracts}>
+    <ContractContext.Provider value={{ contracts, provider, account, chainId, disconnectWallet }}>
       {children}
-    </ContractsContext.Provider>
+    </ContractContext.Provider>
   );
-}
+};

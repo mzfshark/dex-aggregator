@@ -1,11 +1,20 @@
-import React, { useState, useEffect, useContext, useCallback } from "react";
+// src/components/Swap.js
+import React, { useState, useEffect, useCallback } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import Dropdown from "react-bootstrap/Dropdown";
 import Spinner from "react-bootstrap/Spinner";
 import { ethers } from "ethers";
-
+import { getTokensByChainId } from "../utils/loadTokens";
+import { loadTokens } from "../store/tokens";
 import Alert from "./Alert";
-import { swap, loadAccount } from "../store/interactions";
+import {
+  swap,
+  loadAccount,
+  getBestSwapRoute
+} from "../store/interactions"; // <-- ✅ IMPORTAÇÃO
+
+import { fetchTokenBalance } from "../utils/fetchTokenBalance";
+
 import {
   Container,
   InputField,
@@ -20,12 +29,16 @@ import {
   MaxButton,
   InputSlipageField,
   BalanceText,
-  SwapDirectionText    
+  SwapDirectionText,
 } from "../styles/StyledComponents";
-import { ContractsContext } from "./ContractContext";
+
+import { useContracts } from "./ContractContext";
 
 const Swap = () => {
-  const contracts = useContext(ContractsContext);
+  const { account, contracts, provider, chainId } = useContracts();
+  const dispatch = useDispatch();
+  const symbols = useSelector((state) => state.tokens.symbols);
+  const aggregatorState = useSelector((state) => state.aggregator[chainId] || { swapping: {} });
 
   const [inputToken, setInputToken] = useState(null);
   const [outputToken, setOutputToken] = useState(null);
@@ -36,29 +49,176 @@ const Swap = () => {
   const [router, setRouter] = useState(null);
   const [path, setPath] = useState([]);
   const [price, setPrice] = useState("0");
-  const [slippage, setSlippage] = useState("0.5"); // default 0.5%
+  const [slippage, setSlippage] = useState("0.5");
   const [showAlert, setShowAlert] = useState(false);
+  const [routeSymbols, setRouteSymbols] = useState([]);
 
-  const provider = useSelector((state) => state.provider.connection);
-  const account = useSelector((state) => state.provider.account);
-  const chainId = useSelector((state) => state.provider.chainId);
-  const aggregatorState = useSelector((state) => state.aggregator[chainId] || { swapping: {} });
-  const symbols = useSelector((state) => state.tokens.symbols);
+  const truncateDecimals = (value, digits = 4) => {
+    if (!value || typeof value !== "string") return "0";
+    const [intPart, decPart] = value.split(".");
+    if (!decPart) return intPart;
+    return `${intPart}.${decPart.slice(0, digits)}`;
+  };
 
   const isSwapping = aggregatorState.swapping?.isSwapping;
   const isSuccess = aggregatorState.swapping?.isSuccess;
   const transactionHash = aggregatorState.swapping?.transactionHash;
 
-  const dispatch = useDispatch();
+  const slippageBps = Math.floor(parseFloat(slippage) * 100);
 
-  const connectHandler = async () => {
-    await loadAccount(dispatch);
+  const connectHandler = async () => await loadAccount(dispatch);
+
+  useEffect(() => {
+    const initTokens = async () => {
+      if (!provider || !chainId || !account) return;
+  
+      try {
+        const tokenList = getTokensByChainId(chainId);
+        await loadTokens(provider, tokenList, dispatch);
+      } catch (err) {
+        console.error("Erro ao carregar tokens:", err);
+      }
+    };
+  
+    initTokens();
+  }, [provider, chainId, account, dispatch]);
+
+  useEffect(() => {
+    if (provider && chainId) {
+      loadTokens(provider, chainId, dispatch);
+    }
+  }, [provider, chainId, dispatch]);
+
+  const getPrice = useCallback(() => {
+    if (!inputToken || !outputToken || inputAmount === 0n || inputToken === outputToken) {
+      setPrice("0");
+      return;
+    }
+
+    try {
+      const rate = (bestDeal * 10n ** 18n) / inputAmount;
+      const formattedRate = ethers.formatUnits(rate, 18);
+      setPrice(truncateDecimals(formattedRate, 4));
+    } catch (err) {
+      console.error("Erro ao calcular preço", err);
+      setPrice("0");
+    }
+  }, [inputToken, outputToken, inputAmount, bestDeal]);
+
+  useEffect(() => {
+    getPrice();
+  }, [getPrice]);
+
+  const fetchBalance = useCallback(async () => {
+    if (!account || !inputToken) return;
+
+    try {
+      const balance = await fetchTokenBalance(inputToken, symbols, provider, account);
+      setBalance(balance);
+    } catch (err) {
+      console.error("Erro ao buscar saldo:", err);
+      setBalance("0");
+    }
+  }, [account, inputToken, symbols, provider]);
+
+  useEffect(() => {
+    fetchBalance();
+  }, [fetchBalance, inputToken, account]);
+
+  const useMaxAmount = async () => {
+    const contract = symbols.get(inputToken);
+    if (!contract || !account) return;
+
+    try {
+      const rawBalance = await contract.balanceOf(account);
+      const decimals = await contract.decimals();
+      setInputAmount(rawBalance);
+      const formatted = ethers.formatUnits(rawBalance, decimals);
+      document.getElementById("input-amount").value = formatted;
+    } catch (err) {
+      console.error("Erro ao definir valor máximo:", err);
+    }
   };
+
+  const handleInputChange = async (e) => {
+    const val = e.target.value.trim();
+    if (!val || isNaN(val)) {
+      setInputAmount(0n);
+      setOutputAmount("0");
+      return;
+    }
+
+    const tokenAddress = symbols.get(inputToken);
+    const contract = contracts[tokenAddress];
+    if (!contract) return;
+
+    try {
+      const decimals = await contract.decimals();
+      const parsed = ethers.parseUnits(val, decimals);
+      setInputAmount(parsed);
+    } catch (err) {
+      console.error("Erro ao interpretar valor de entrada:", err);
+      setInputAmount(0n);
+    }
+  };
+
+  const handleTokenSelection = (type, token) => {
+    if (type === "input") setInputToken(token);
+    else setOutputToken(token);
+  };
+
+  const swapTokens = () => {
+    setInputToken(outputToken);
+    setOutputToken(inputToken);
+    setInputAmount(0n);
+    setOutputAmount("0");
+    setRouteSymbols([]);
+  };
+
+  useEffect(() => {
+    if (inputToken && outputToken && inputToken !== outputToken) {
+      const from = symbols.get(inputToken);
+      const to = symbols.get(outputToken);
+      if (from && to) setPath([from, to]);
+    } else {
+      setPath([]);
+    }
+  }, [inputToken, outputToken, symbols]);
+
+  useEffect(() => {
+    const fetchRoute = async () => {
+      if (Array.isArray(path) && path.length >= 2 && inputAmount > 0n) {
+        try {
+          const route = await getBestSwapRoute(contracts.aggregator, path, inputAmount);
+          const { amountOut, router, fullPath } = route;
+
+          setBestDeal(amountOut);
+          setRouter(router);
+          setPath(fullPath);
+
+          const formatted = ethers.formatUnits(amountOut, 18);
+          setOutputAmount(truncateDecimals(formatted, 4));
+
+          const symbolPath = fullPath.map((addr) =>
+            [...symbols].find(([, contract]) => contract.target === addr)?.[0] || addr
+          );
+          setRouteSymbols(symbolPath);
+        } catch (err) {
+          console.error("Erro ao buscar melhor rota:", err);
+          setBestDeal(0n);
+          setOutputAmount("0");
+          setRouteSymbols([]);
+        }
+      }
+    };
+
+    fetchRoute();
+  }, [path, inputAmount, contracts, symbols]);
 
   const swapHandler = async (e) => {
     e.preventDefault();
-    if (!inputToken || !outputToken || inputToken === outputToken) {
-      window.alert("Invalid Token Pair");
+    if (!inputToken || !outputToken || inputToken === outputToken || path.length < 2) {
+      alert("Selecione um par de tokens válido.");
       return;
     }
 
@@ -74,149 +234,18 @@ const Swap = () => {
       inputAmount.toString(),
       slippageTolerance.toString(),
       slippageAmount,
+      slippageBps,
       deadline,
-      dispatch,
+      dispatch
     );
 
     setShowAlert(true);
-  };
-
-  const getPrice = useCallback(() => {
-    if (
-      !inputToken ||
-      !outputToken ||
-      inputToken === outputToken ||
-      inputAmount === 0n
-    ) {
-      setPrice("0");
-      return;
-    }
-
-    try {
-      const rate = (bestDeal * 10n ** 18n) / inputAmount;
-      const formattedRate = ethers.formatUnits(rate, 18);
-      setPrice(formattedRate);
-    } catch (err) {
-      setPrice("0");
-    }
-  }, [inputToken, outputToken, inputAmount, bestDeal]);
-
-  useEffect(() => {
-    getPrice();
-  }, [getPrice]);
-
-  const fetchBalance = useCallback(async () => {
-    if (!account || !inputToken) return;
-  
-    try {
-      const contract = contracts[inputToken.toLowerCase()];
-      const rawBalance = await contract.balanceOf(account);
-      const decimals = await contract.decimals();
-      const formatted = ethers.formatUnits(rawBalance, decimals);
-      setBalance(parseFloat(formatted).toFixed(4));
-    } catch (err) {
-      console.error("Error loading balance", err);
-      setBalance("0");
-    }
-  }, [account, inputToken, contracts]); // certifique-se que `contracts` está estável
-  
-  useEffect(() => {
     fetchBalance();
-  }, [fetchBalance]);
-  
-
-  const useMaxAmount = async () => {
-    if (!inputToken || !account) return;
-
-    try {
-      const contract = contracts[inputToken.toLowerCase()];
-      const rawBalance = await contract.balanceOf(account);
-      const decimals = await contract.decimals();
-      setInputAmount(rawBalance);
-      const formatted = ethers.formatUnits(rawBalance, decimals);
-      document.getElementById("input-amount").value = formatted;
-    } catch (err) {
-      console.error("Error setting max amount", err);
-    }
   };
-
-  const handleTokenSelection = (type, token) => {
-    if (type === "input") setInputToken(token);
-    else setOutputToken(token);
-  };
-
-  const handleInputChange = async (e) => {
-    const val = e.target.value.trim();
-
-    if (!val || isNaN(val)) {
-      setInputAmount(0n);
-      setOutputAmount("0");
-      return;
-    }
-
-    if (!inputToken || !outputToken || inputToken === outputToken) {
-      alert("Invalid token pair.");
-      return;
-    }
-
-    const contractKey = inputToken.toLowerCase();
-    const contract = contracts[contractKey];
-
-    try {
-      const decimals = await contract.decimals();
-      const parsedAmount = ethers.parseUnits(val, decimals);
-      setInputAmount(parsedAmount);
-    } catch (err) {
-      console.error("Error parsing input amount:", err);
-      setInputAmount(0n);
-    }
-  };
-
-  const swapTokens = () => {
-    const temp = inputToken;
-    setInputToken(outputToken);
-    setOutputToken(temp);
-    setInputAmount(0n);
-    setOutputAmount("0");
-  };
-
-  useEffect(() => {
-    if (inputToken && outputToken && inputToken !== outputToken) {
-      setPath([symbols.get(inputToken), symbols.get(outputToken)]);
-    } else {
-      setPath([]);
-    }
-  }, [inputToken, outputToken, symbols]);
-
-  useEffect(() => {
-    const fetchBestDeal = async () => {
-      if (path.length === 2 && inputAmount > 0n) {
-        try {
-          const [amountOut, selectedRouter] =
-            await contracts.aggregator.getBestAmountsOutOnUniswapForks(
-              path,
-              inputAmount.toString(),
-            );
-
-          setBestDeal(BigInt(amountOut));
-          setRouter(selectedRouter);
-
-          const formatted = ethers.formatUnits(amountOut, 18);
-          setOutputAmount(parseFloat(formatted).toFixed(4));
-        } catch (error) {
-          console.error("Error fetching best deal:", error);
-          setBestDeal(0n);
-          setOutputAmount("0");
-        }
-      }
-    };
-    fetchBestDeal();
-  }, [path, inputAmount, contracts.aggregator]);
 
   return (
     <Container>
       <SwapContainer>
-        {/* INPUT TOKEN BLOCK */}
         <TokenInfoContainer>
           <InputWrapper>
             <InputField
@@ -224,7 +253,7 @@ const Swap = () => {
               type="text"
               placeholder="0"
               onChange={handleInputChange}
-              disabled={!outputToken || !inputToken}
+              disabled={!inputToken || !outputToken}
             />
             <MaxButton onClick={useMaxAmount}>Max</MaxButton>
           </InputWrapper>
@@ -232,8 +261,8 @@ const Swap = () => {
           <StyledDropdown onSelect={(token) => handleTokenSelection("input", token)}>
             <Dropdown.Toggle>{inputToken || "Select token"}</Dropdown.Toggle>
             <Dropdown.Menu>
-              {symbols && Array.from(symbols).map(([symbol, address]) => (
-                <Dropdown.Item key={address} eventKey={symbol}>
+              {symbols && Array.from(symbols).map(([symbol]) => (
+                <Dropdown.Item key={symbol} eventKey={symbol}>
                   {symbol}
                 </Dropdown.Item>
               ))}
@@ -244,22 +273,16 @@ const Swap = () => {
         <BalanceText>Balance: {balance}</BalanceText>
         <SwapDirectionText onClick={swapTokens}>⮂</SwapDirectionText>
 
-        {/* OUTPUT TOKEN BLOCK */}
         <TokenInfoContainer>
           <InputWrapper>
-            <InputField
-              type="text"
-              placeholder="0"
-              value={outputAmount === "0" ? "" : outputAmount}
-              disabled
-            />
+            <InputField type="text" placeholder="0" value={outputAmount} disabled />
           </InputWrapper>
 
           <StyledDropdown onSelect={(token) => handleTokenSelection("output", token)}>
             <Dropdown.Toggle>{outputToken || "Select token"}</Dropdown.Toggle>
             <Dropdown.Menu>
-              {symbols && Array.from(symbols).map(([symbol, address]) => (
-                <Dropdown.Item key={address} eventKey={symbol}>
+              {symbols && Array.from(symbols).map(([symbol]) => (
+                <Dropdown.Item key={symbol} eventKey={symbol}>
                   {symbol}
                 </Dropdown.Item>
               ))}
@@ -269,7 +292,6 @@ const Swap = () => {
 
         <ExchangeRateText>Exchange Rate: {price}</ExchangeRateText>
 
-        {/* SLIPPAGE FIELD */}
         <TokenActionsRow>
           <LabelText>Slippage (%)</LabelText>
           <InputSlipageField
@@ -282,10 +304,15 @@ const Swap = () => {
           />
         </TokenActionsRow>
 
-        {/* SWAP BUTTON */}
+        {routeSymbols.length > 1 && (
+          <ExchangeRateText>
+            Route: {routeSymbols.join(" → ")}
+          </ExchangeRateText>
+        )}
+
         {account ? (
           isSwapping ? (
-            <SwapButton variant="primary" disabled>
+            <SwapButton disabled>
               <Spinner animation="grow" size="sm" /> Swapping ...
             </SwapButton>
           ) : (
@@ -296,16 +323,14 @@ const Swap = () => {
         )}
       </SwapContainer>
 
-      {/* ALERTS */}
       {isSwapping ? (
-        <Alert message="Swap pending..." transactionHash={null} variant="info" setShowAlert={setShowAlert} />
+        <Alert message="Swap pending..." variant="info" setShowAlert={setShowAlert} />
       ) : isSuccess && showAlert ? (
         <Alert message="Swap Successful" transactionHash={transactionHash} variant="success" setShowAlert={setShowAlert} />
       ) : !isSuccess && showAlert ? (
-        <Alert message="Swap Failed" transactionHash={null} variant="danger" setShowAlert={setShowAlert} />
+        <Alert message="Swap Failed" variant="danger" setShowAlert={setShowAlert} />
       ) : null}
     </Container>
-
   );
 };
 

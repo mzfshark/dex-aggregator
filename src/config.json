@@ -1,13 +1,12 @@
 {
-  "1666600000": {
-    "aggregator": {
-      "address": "0xa96fDB2eFcE1e2a3Cc8a9947805d3acE2eAE6154"
-    },
-    "dai": {
-      "address": "0xEf977d2f931C1978Db5F6747666fa1eACB0d0339"
-    },
-    "weth": {
-      "address": "0xcF664087a5bB0237a0BAd6742852ec6c8d69A27a"
+  "defaultNetwork": "harmony",
+  "networks": {
+    "harmony": {
+      "chainId": 1666600000,
+      "rpcUrl": "https://api.harmony.one",
+      "contracts": {
+        "aggregator": "0xa96fDB2eFcE1e2a3Cc8a9947805d3acE2eAE6154"
+      }
     }
   }
 }

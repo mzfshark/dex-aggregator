@@ -1,170 +1,102 @@
+// src/store/interactions.js
 import { ethers } from "ethers";
+import ERC20ABI from "../abis/ERC20.json";
+import tokenList from "../utils/loadTokens";
 
-import { setProvider, setNetwork, setAccount } from "./reducers/provider";
 
-import {
-  setSymbols,
-  //balancesLoaded
-} from "./reducers/tokens";
-
-import {
-  // swapsLoaded,
-  setIsSwapping,
-  setSwapSuccess,
-  setSwapFail,
-} from "./reducers/aggregator";
-
-export const loadProvider = (provider, dispatch) => {
-  dispatch(setProvider(provider));
-
-  return provider;
-};
-
-export const loadNetwork = async (provider, dispatch) => {
-  const { chainId } = await provider.getNetwork();
-  dispatch(setNetwork(chainId.toString()));
-
-  return chainId;
-};
-
+// Carrega conta e provider
 export const loadAccount = async (dispatch) => {
-  const accounts = await window.ethereum.request({
-    method: "eth_requestAccounts",
-  });
+  const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
   const account = ethers.getAddress(accounts[0]);
-  dispatch(setAccount(account));
-
-  return account;
+  dispatch({ type: "ACCOUNT_LOADED", account });
 };
 
-// ------------------------------------------------------------------------------
-// LOAD CONTRACTS
+export const loadTokens = async (dispatch, provider) => {
+  try {
+    const response = await tokenList;
+    const data = await response.json(); 
 
-export const loadTokens = async (erc20s, dispatch) => {
-  console.log("load tokens called");
+    const tokensMap = new Map();
 
-  const symbols = new Map();
+    for (const token of data.tokens) {
+      const tokenContract = new ethers.Contract(token.address, ERC20ABI, provider);
+      tokensMap.set(token.symbol, tokenContract);
+    }
 
-  for (let i = 0; i < erc20s.length; i++) {
-    const symbol = await erc20s[i].symbol();
-    const address = erc20s[i].address; // ✅ propriedade, não função
-    symbols.set(symbol, address);
+    dispatch({
+      type: "TOKENS_LOADED",
+      symbols: tokensMap,
+    });
+  } catch (error) {
+    console.error("Erro ao carregar lista de tokens:", error);
   }
-
-  dispatch(setSymbols(symbols));
-  console.log("symbols:", symbols);
-
-  return symbols;
 };
 
-// export const fetchTokens = (contracts) => {
-//   return async dispatch => {
-//     try {
-//       dispatch(setSymbols([await contracts.dai.symbol(), await contracts.weth.symbol()]))
-//     } catch (error) {
-//       console.error('Error fetching tokens info: ', error);
-//       // Optionally dispatch an error action
-//       // dispatch(fetchDataError(error));
-//     }
-//   };
-// };
 
-// ------------------------------------------------------------------------------
-// LOAD BALANCES
+// Busca melhor rota e cotação de swap
+export const getBestSwapRoute = async (aggregatorContract, path, inputAmount) => {
+  try {
+    if (!Array.isArray(path) || path.length < 2 || !inputAmount) {
+      throw new Error("Parâmetros inválidos para rota");
+    }
 
-// export const loadBalances = async (tokens, account, dispatch) => {
-//   const balance1 = await tokens[0].balanceOf(account)
-//   const balance2 = await tokens[1].balanceOf(account)
+    const [amountOut, selectedRouter, fullPath] =
+      await aggregatorContract.getBestAmountsOutOnUniswapForks(path, inputAmount.toString());
 
-//   dispatch(balancesLoaded([
-//     ethers.formatUnits(balance1.toString(), 'ether'),
-//     ethers.formatUnits(balance2.toString(), 'ether')
-//   ]))
+    return {
+      amountOut: BigInt(amountOut),
+      router: selectedRouter,
+      fullPath,
+    };
+  } catch (err) {
+    console.error("Erro em getBestSwapRoute:", err);
+    return {
+      amountOut: 0n,
+      router: null,
+      fullPath: [],
+    };
+  }
+};
 
-// }
-
-// ------------------------------------------------------------------------------
-// SWAP
+// Executa o swap
 export const swap = async (
   provider,
   contracts,
   path,
   router,
-  amount,
+  amountIn,
   minAmountOut,
   slippage,
+  slippageBps,
   deadline,
-  dispatch,
+  dispatch
 ) => {
   try {
-    dispatch(setIsSwapping(true));
-
-    // VALIDATIONS ----------------------------------------------------------
-    if (!provider) throw new Error("Provider não definido.");
-    if (!contracts || !contracts.dai || !contracts.aggregator) {
-      throw new Error("Contratos não definidos corretamente.");
-    }
-    if (
-      !path ||
-      !Array.isArray(path) ||
-      path.length < 2 ||
-      !path[0] ||
-      !path[1]
-    ) {
-      throw new Error("Caminho inválido (path).");
-    }
-    if (!router) throw new Error("Router está vazio ou nulo.");
-    if (!amount) throw new Error("Quantidade (amount) inválida.");
-    if (!minAmountOut) throw new Error("minAmountOut inválido.");
-    if (!slippage && slippage !== 0) throw new Error("Slippage não definido.");
-    if (!deadline) throw new Error("Deadline não definido.");
-
-    console.log(">>> swap() params:");
-    console.log("path:", path);
-    console.log("router:", router);
-    console.log("amount:", amount);
-    console.log("minAmountOut:", minAmountOut);
+    dispatch({ type: "SWAP_REQUEST" });
 
     const signer = await provider.getSigner();
+    const inputToken = path[0];
 
-    // APPROVE
-    const aggregatorAddress = await contracts.aggregator.getAddress();
-    const approveTx = await contracts.dai
-      .connect(signer)
-      .approve(aggregatorAddress, amount);
-    await approveTx.wait();
+    // Aprova o token de entrada se necessário
+    const tokenContract = new ethers.Contract(inputToken, ERC20ABI, signer);
+    const allowance = await tokenContract.allowance(await signer.getAddress(), contracts.aggregator.target);
 
-    // SWAP
-    const swapTx = await contracts.aggregator
-      .connect(signer)
-      .swapOnUniswapFork(
-        path,
-        router,
-        amount,
-        minAmountOut,
-        slippage,
-        deadline,
-      );
+    if (allowance < BigInt(amountIn)) {
+      const txApprove = await tokenContract.approve(contracts.aggregator.target, amountIn);
+      await txApprove.wait();
+    }
 
-    await swapTx.wait();
-    dispatch(setSwapSuccess(swapTx.hash));
-  } catch (error) {
-    console.error("Erro no swap:", error);
-    dispatch(setSwapFail());
+    // Realiza o swap
+    const aggregator = contracts.aggregator.connect(signer);
+    const tx = await aggregator.swap(router, path, amountIn, minAmountOut, deadline, slippageBps);
+    const receipt = await tx.wait();
+
+    dispatch({
+      type: "SWAP_SUCCESS",
+      transactionHash: receipt.transactionHash,
+    });
+  } catch (err) {
+    console.error("Erro ao executar swap:", err);
+    dispatch({ type: "SWAP_FAIL" });
   }
 };
-
-// ------------------------------------------------------------------------------
-// LOAD ALL SWAPS
-
-// export const loadAllSwaps = async (provider, aggregator, dispatch) => {
-//   const block = await provider.getBlockNumber()
-
-//   const swapStream = await aggregator.queryFilter('Swap', 0, block)
-
-//   const swaps = swapStream.map(event => {
-//     return { hash: event.transactionHash, args: event.args }
-//   })
-
-//   dispatch(swapsLoaded(swaps))
-// }
