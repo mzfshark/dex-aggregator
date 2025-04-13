@@ -1,12 +1,14 @@
-require('@nomicfoundation/hardhat-toolbox')
-require('@nomicfoundation/hardhat-verify')
-require('dotenv/config')
-// require('hardhat-blockscout-verify') // plugin opcional para Blockscout
+import { HardhatUserConfig } from 'hardhat/config'
+import '@nomicfoundation/hardhat-toolbox'
+import 'dotenv/config'
+// import '@nomiclabs/hardhat-ethers'; // ethers@5
+
+import '@nomicfoundation/hardhat-verify' // ethers@6
+//import 'hardhat-blockscout-verify' // plugin opcional para Blockscout
 
 const privateKey = process.env.PKEY || ''
 
-/** @type import('hardhat/config').HardhatUserConfig */
-const config = {
+const config: HardhatUserConfig = {
   solidity: '0.8.18',
   defaultNetwork: 'hardhat',
   networks: {
@@ -42,4 +44,4 @@ const config = {
   }
 }
 
-module.exports = config
+export default config
