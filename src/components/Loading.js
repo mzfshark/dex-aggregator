@@ -1,10 +1,10 @@
-import Spinner from "react-bootstrap/Spinner";
+// src/components/Loading.js
+import React from 'react';
 
 const Loading = () => {
   return (
-    <div className="text-center my-5">
-      <Spinner animation="grow" />
-      <p className="my-2">Loading Data...</p>
+    <div className="loading text-center my-4">
+      <p>Carregando...</p>
     </div>
   );
 };

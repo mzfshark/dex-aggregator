@@ -1,37 +1,28 @@
-import React from "react";
-import { useLocation } from "react-router-dom";
-import Nav from "react-bootstrap/Nav";
-import { LinkContainer } from "react-router-bootstrap";
-import styles from "../styles/Theme.module.css";
+// src/components/Tabs.js
+import React, { useState } from 'react';
 
-const Tabs = () => {
-  const location = useLocation();
+const Tabs = ({ tabs }) => {
+  const tabKeys = Object.keys(tabs);
+  const [activeTab, setActiveTab] = useState(tabKeys[0]);
+
   return (
-    <Nav>
-      <LinkContainer to="/swap">
-        <Nav.Link
-          className={
-            location.pathname === "/swap"
-              ? `${styles.tabLink} ${styles.active}`
-              : styles.tabLink
-          }
-        >
-          Swap
-        </Nav.Link>
-      </LinkContainer>
-
-      <LinkContainer to="/trx">
-        <Nav.Link
-          className={
-            location.pathname === "/trx"
-              ? `${styles.tabLink} ${styles.active}`
-              : styles.tabLink
-          }
-        >
-          Transactions
-        </Nav.Link>
-      </LinkContainer>
-    </Nav>
+    <div>
+      <ul className="nav nav-tabs">
+        {tabKeys.map((tab) => (
+          <li className="nav-item" key={tab}>
+            <button
+              className={`nav-link ${activeTab === tab ? 'active' : ''}`}
+              onClick={() => setActiveTab(tab)}
+            >
+              {tab}
+            </button>
+          </li>
+        ))}
+      </ul>
+      <div className="tab-content mt-3">
+        {tabs[activeTab]}
+      </div>
+    </div>
   );
 };
 

@@ -9,12 +9,17 @@ import reportWebVitals from "./reportWebVitals";
 import { Provider } from "react-redux";
 import { store } from "./store/store";
 
-import { ContractProvider } from "./components/ContractContext";
+import ContractProvider from './components/ContractContext';
 
-const root = ReactDOM.createRoot(document.getElementById("root"));
+const container = document.getElementById("root");
+if (!container) {
+  throw new Error("Elemento com id 'root' não encontrado");
+}
+const root = ReactDOM.createRoot(container);
+
 root.render(
   <Provider store={store}>
-    <ContractProvider> 
+    <ContractProvider>
       <App />
     </ContractProvider>
   </Provider>

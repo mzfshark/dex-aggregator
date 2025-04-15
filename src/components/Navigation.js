@@ -1,7 +1,7 @@
 // src/components/Navigation.js
 import React, { useEffect, useState, useCallback } from "react";
 import { ethers } from "ethers";
-import { useContracts } from "./ContractContext";
+import { useContract } from "./ContractContext";
 
 import {
   Nav,
@@ -14,9 +14,10 @@ import {
 } from "../styles/StyledComponents";
 
 const Navigation = () => {
-  const { provider, account, disconnectWallet } = useContracts();
+  const { provider, account, disconnectWallet } = useContract();
   const [nativeBalance, setNativeBalance] = useState("0.0000");
 
+  // Carrega o saldo nativo da conta conectada
   const loadNativeBalance = useCallback(async () => {
     if (provider && account) {
       try {
@@ -34,11 +35,12 @@ const Navigation = () => {
     loadNativeBalance();
   }, [loadNativeBalance]);
 
+  // Função para conectar a carteira via MetaMask
   const connectWalletHandler = async () => {
     if (window.ethereum) {
       try {
         await window.ethereum.request({ method: "eth_requestAccounts" });
-        window.location.reload(); // força o re-render e re-execução do ContractContext
+        window.location.reload(); // Força re-render para atualizar o contexto
       } catch (err) {
         console.error("Erro ao conectar wallet:", err);
       }
@@ -60,7 +62,10 @@ const Navigation = () => {
               <strong>{nativeBalance}</strong> ONE
             </BalanceWrapper>
             <span>{`${account.slice(0, 6)}...${account.slice(-4)}`}</span>
-            <DisconnectButton onClick={disconnectWallet} style={{ marginLeft: "10px" }}>
+            <DisconnectButton
+              onClick={disconnectWallet}
+              style={{ marginLeft: "10px" }}
+            >
               Disconnect
             </DisconnectButton>
           </AccountInfo>
@@ -71,7 +76,6 @@ const Navigation = () => {
         )}
       </NavItem>
     </Nav>
-
   );
 };
 

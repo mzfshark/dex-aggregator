@@ -1,59 +1,65 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
-import { ethers } from "ethers";
-import AggregatorABI from "../abis/Aggregator.json";
-import config from "../config.json";
+// src/components/ContractContext.js
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { ethers } from 'ethers';
+import AggregatorABI from '../abis/Aggregator.json';
 
-// Criação do contexto
-const ContractContext = createContext(null);
+const ContractContext = createContext();
 
-// Hook customizado para acesso ao contexto
-export const useContracts = () => useContext(ContractContext);
+export const useContract = () => {
+  return useContext(ContractContext);
+};
 
-// Provider
-export const ContractProvider = ({ children }) => {
-  const [contracts, setContracts] = useState({});
+const ContractProvider = ({ children }) => {
   const [provider, setProvider] = useState(null);
+  const [aggregator, setAggregator] = useState(null);
+  const [signer, setSigner] = useState(null);
   const [account, setAccount] = useState(null);
-  const [chainId, setChainId] = useState(null); 
+  const [loading, setLoading] = useState(true);
+
+  // Defina o endereço do contrato Aggregator via variável de ambiente ou hard-code
+  const aggregatorAddress = process.env.REACT_APP_AGGREGATOR_ADDRESS || '0xYourAggregatorAddress';
+
+  // Memorize a função initBlockchain para que sua referência seja estável
+  const initBlockchain = useCallback(async () => {
+    if (window.ethereum) {
+      try {
+        // Solicita permissão ao usuário
+        await window.ethereum.request({ method: 'eth_requestAccounts' });
+        const web3Provider = new ethers.BrowserProvider(window.ethereum);
+        setProvider(web3Provider);
+        const signer = await web3Provider.getSigner();
+        setSigner(signer);
+        const userAddress = await signer.getAddress();
+        setAccount(userAddress);
+        // Cria a instância do contrato Aggregator
+        const aggregatorInstance = new ethers.Contract(aggregatorAddress, AggregatorABI, signer);
+        setAggregator(aggregatorInstance);
+      } catch (error) {
+        console.error('Erro ao conectar com o Ethereum:', error);
+      }
+    } else {
+      console.error("Provider Ethereum não encontrado. Instale o MetaMask.");
+    }
+    setLoading(false);
+  }, [aggregatorAddress]);
 
   useEffect(() => {
-    const init = async () => {
-      if (window.ethereum) {
-        const newProvider = new ethers.BrowserProvider(window.ethereum);
-        setProvider(newProvider);
+    initBlockchain();
+  }, [initBlockchain]);
 
-        const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
-        setAccount(accounts[0]);
-
-        const { chainId } = await newProvider.getNetwork();
-        setChainId(chainId); // ✅ ISSO É O QUE FALTAVA
-
-        const aggregatorAddress = config[chainId.toString()]?.aggregator;
-
-        if (!aggregatorAddress) {
-          console.warn(`Endereço do contrato não encontrado para chainId ${chainId}`);
-          return;
-        }
-
-        const aggregator = new ethers.Contract(aggregatorAddress, AggregatorABI, newProvider);
-        setContracts({ aggregator });
-      }
-    };
-
-    init();
-  }, []);
-
-
-  const disconnectWallet = () => {
-    setAccount(null);
-    setProvider(null);
-    setChainId(null);
-    setContracts({});
+  const contextValue = {
+    provider,
+    aggregator,
+    signer,
+    account,
+    loading,
   };
 
   return (
-    <ContractContext.Provider value={{ contracts, provider, account, chainId, disconnectWallet }}>
+    <ContractContext.Provider value={contextValue}>
       {children}
     </ContractContext.Provider>
   );
 };
+
+export default ContractProvider;

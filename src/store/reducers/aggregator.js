@@ -1,6 +1,7 @@
+// src/store/reducers/aggregator.js
 import { createSlice } from "@reduxjs/toolkit";
 
-// Factory function para garantir cópia nova a cada rede
+// Função que retorna o estado inicial para cada chainId
 const createInitialSwapState = () => ({
   contract: null,
   swaps: [],
@@ -11,50 +12,71 @@ const createInitialSwapState = () => ({
   },
 });
 
-const initialState = {};
+// Estado inicial geral do slice, contendo o chainId atual e os dados para cada rede
+const initialState = {
+  currentChainId: null,
+  data: {},
+};
 
-export const aggregator = createSlice({
+const aggregatorSlice = createSlice({
   name: "aggregator",
   initialState,
   reducers: {
-    initAggregatorState: (state, action) => {
+    // Define o chainId atual e garante que exista um estado para ele
+    setCurrentChainId: (state, action) => {
       const chainId = action.payload;
-      if (!state[chainId]) {
-        state[chainId] = createInitialSwapState();
+      state.currentChainId = chainId;
+      if (!state.data[chainId]) {
+        state.data[chainId] = createInitialSwapState();
       }
     },
+    // Armazena a instância do contrato para determinado chainId
     setAggregatorContract: (state, action) => {
       const { chainId, contract } = action.payload;
-      if (!state[chainId]) state[chainId] = createInitialSwapState();
-      state[chainId].contract = contract;
+      if (!state.data[chainId]) {
+        state.data[chainId] = createInitialSwapState();
+      }
+      state.data[chainId].contract = contract;
     },
+    // Atualiza os swaps carregados para determinado chainId
     setSwapsLoaded: (state, action) => {
       const { chainId, swaps } = action.payload;
-      if (!state[chainId]) state[chainId] = createInitialSwapState();
-      state[chainId].swaps = swaps;
+      if (!state.data[chainId]) {
+        state.data[chainId] = createInitialSwapState();
+      }
+      state.data[chainId].swaps = swaps;
     },
+    // Marca o início de uma operação de swap para determinado chainId
     setIsSwapping: (state, action) => {
-      const chainId = action.payload;
-      if (!state[chainId]) state[chainId] = createInitialSwapState();
-      state[chainId].swapping = {
+      const { chainId } = action.payload;
+      if (!state.data[chainId]) {
+        state.data[chainId] = createInitialSwapState();
+      }
+      state.data[chainId].swapping = {
         isSwapping: true,
         isSuccess: false,
         transactionHash: null,
       };
     },
+    // Define que o swap foi bem-sucedido para determinado chainId
     setSwapSuccess: (state, action) => {
-      const { chainId, hash } = action.payload;
-      if (!state[chainId]) state[chainId] = createInitialSwapState();
-      state[chainId].swapping = {
+      const { chainId, transactionHash } = action.payload;
+      if (!state.data[chainId]) {
+        state.data[chainId] = createInitialSwapState();
+      }
+      state.data[chainId].swapping = {
         isSwapping: false,
         isSuccess: true,
-        transactionHash: hash,
+        transactionHash,
       };
     },
+    // Define que o swap falhou para determinado chainId
     setSwapFail: (state, action) => {
-      const chainId = action.payload;
-      if (!state[chainId]) state[chainId] = createInitialSwapState();
-      state[chainId].swapping = {
+      const { chainId } = action.payload;
+      if (!state.data[chainId]) {
+        state.data[chainId] = createInitialSwapState();
+      }
+      state.data[chainId].swapping = {
         isSwapping: false,
         isSuccess: false,
         transactionHash: null,
@@ -64,12 +86,12 @@ export const aggregator = createSlice({
 });
 
 export const {
-  initAggregatorState,
+  setCurrentChainId,
   setAggregatorContract,
   setSwapsLoaded,
   setIsSwapping,
   setSwapSuccess,
   setSwapFail,
-} = aggregator.actions;
+} = aggregatorSlice.actions;
 
-export default aggregator.reducer;
+export default aggregatorSlice.reducer;
