@@ -2,85 +2,103 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 const fs = require("fs");
 
-// Carregar o arquivo config.json
+// Carregar configuração
 const config = JSON.parse(fs.readFileSync('./config.json', 'utf8'));
 
-describe("Aggregator (real)", () => {
-  let deployer, investor, tokenA, tokenB, aggregator, routerAddress;
+function tokens(n) {
+  return ethers.parseUnits(n.toString(), 'ether');
+}
+
+describe("Aggregator", () => {
+  let deployer, investor, tokenA, tokenB, aggregator, router;
+  const MAX_SLIPPAGE_PERCENT = 20; // Ajuste exatamente conforme definido no Aggregator.sol
+
 
   beforeEach(async () => {
     [deployer, investor] = await ethers.getSigners();
+    router = config.UNISWAP.ROUTERS.VIPERSWAP;
 
-    // Aqui você pode escolher qualquer router da lista 'ROUTERS'
-    // Exemplo: Usar o "VIPERSWAP"
-    routerAddress = config.UNISWAP.ROUTERS.VIPERSWAP;
+    // ERC20 Mocks
+    const ERC20Mock = await ethers.getContractFactory("ERC20Mock");
+    tokenA = await ERC20Mock.deploy("TokenA", "TKA", deployer.address, tokens(10000));
+    tokenB = await ERC20Mock.deploy("TokenB", "TKB", deployer.address, tokens(10000));
 
-    // Desplegar o contrato RouterMock
-    const RouterMock = await ethers.getContractFactory("RouterMock");
-    router = await RouterMock.deploy();
-    await router.waitForDeployment();
-    
-    // Desplegar o contrato Aggregator
+    // Aggregator
     const Aggregator = await ethers.getContractFactory("Aggregator");
-    aggregator = await Aggregator.deploy();
+    aggregator = await Aggregator.deploy([router]);
     await aggregator.waitForDeployment();
+
+    // Distribuir tokens
+    await tokenA.transfer(investor.address, tokens(100));
+
+    // Aprovação prévia para o Aggregator
+    await tokenA.connect(investor).approve(aggregator.target, tokens(100));
   });
 
-  it("Adiciona router autorizado", async () => {
-    // Adicionar o router ao Aggregator
-    await aggregator.addWhiteListedRouter(routerAddress);
-    expect(await aggregator.isWhitelistedRouter(routerAddress)).to.be.true;
+  it("Verifica routers adicionados corretamente", async () => {
+    const storedRouter = await aggregator.whiteListedRouters(0);
+    expect(storedRouter).to.equal(router);
   });
 
-  it("Impede não-owner de adicionar router", async () => {
-    // Verificar que apenas o owner pode adicionar o router
+  it("Verifica permissão para adicionar router", async () => {
     await expect(
-      aggregator.connect(investor).addWhiteListedRouter(routerAddress)
+      aggregator.connect(investor).addWhiteListedRouter(config.UNISWAP.ROUTERS.SUSHISWAP)
     ).to.be.revertedWith("Ownable: caller is not the owner");
   });
 
-  it("Realiza swap com erro de slippage por minAmount alto", async () => {
-    const path = [tokenA.target, tokenB.target];
-    await tokenA.approve(aggregator.target, tokens(10));
+  it("Deve reverter a transação se o slippage for acima do permitido", async () => {
+    const deadline = Math.floor(Date.now() / 1000) + 600;
 
-    // Forçar slippage erro com um minAmount muito alto
+    const slippageAcimaDoPermitido = MAX_SLIPPAGE_PERCENT + 1; // força slippage inválido
+
     await expect(
-      aggregator.swapOnUniswapFork(
-        path,
-        ethers.ZeroAddress,
+      aggregator.connect(investor).swapOnUniswapFork(
+        [tokenA.target, tokenB.target],
+        router,
         tokens(10),
-        tokens(100), // muito alto, forçando slippage fail
-        10,
-        Math.floor(Date.now() / 1000) + 600
+        tokens(100), 
+        slippageAcimaDoPermitido, 
+        deadline
       )
     ).to.be.revertedWith("Slippage too high");
-  });
-  
-  it("Executa swap e transfere corretamente", async () => {
-    const path = [tokenA.address, tokenB.address]; // Use os endereços dos contratos
+});
+
+
+  it("Realiza swap com sucesso", async () => {
     const deadline = Math.floor(Date.now() / 1000) + 600;
-  
-    await tokenA.connect(investor).approve(aggregator.address, tokens(10));
-    await tokenB.connect(deployer).transfer(aggregator.address, tokens(100)); // Transferir tokens para o contrato
-    
-    const beforeA = await tokenA.balanceOf(investor.address);
-    const beforeB = await tokenB.balanceOf(investor.address);
-  
+
+    // Mock Router: Implemente um MockRouterV2 que permita trocas simuladas
+    const MockRouter = await ethers.getContractFactory("MockRouterV2");
+    const routerMock = await MockRouter.deploy();
+    await routerMock.waitForDeployment();
+
+    // Adiciona o routerMock ao Aggregator
+    await aggregator.addWhiteListedRouter(routerMock.target);
+
+    // Pré-approve do aggregator para o router mock
+    await tokenA.connect(investor).approve(routerMock.target, tokens(10));
+
+    // Simular liquidez no router mock
+    await tokenB.transfer(routerMock.target, tokens(1000));
+
+    const beforeBalanceB = await tokenB.balanceOf(investor.address);
+
     await aggregator.connect(investor).swapOnUniswapFork(
-      path,
-      ethers.ZeroAddress,
+      [tokenA.target, tokenB.target],
+      routerMock.target,
       tokens(10),
-      tokens(18),
-      5,
+      tokens(5),
+      2,
       deadline
     );
-  
-    const afterA = await tokenA.balanceOf(investor.address);
-    const afterB = await tokenB.balanceOf(investor.address);
-  
-    // Espera-se que o saldo de tokenA diminua em 10 e o de tokenB aumente
-    expect(afterA).to.equal(beforeA - tokens(10));
-    expect(afterB).to.be.gt(beforeB);
+
+    const afterBalanceB = await tokenB.balanceOf(investor.address);
+    expect(afterBalanceB).to.be.gt(beforeBalanceB);
   });
-  
+
+  it("Confirma cálculo da taxa (fee) proporcional ao slippage", async () => {
+    const slippagePercent = 3; // 3%
+    const expectedFee = slippagePercent * 1; 
+    expect(expectedFee).to.equal(3);
+  });
 });

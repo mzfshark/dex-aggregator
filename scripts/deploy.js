@@ -5,24 +5,16 @@ async function main() {
   const Aggregator = await ethers.getContractFactory('Aggregator')
 
   const routerList = [
-    config.VIPERSWAP.V2_ROUTER_02_ADDRESS,
-    config.SUSHISWAP.V2_ROUTER_02_ADDRESS,
-    config.DFK.V2_ROUTER_02_ADDRESS,
-    config.DEFIRA.V2_ROUTER_02_ADDRESS,
-    config.SONICSWAP.V2_ROUTER_02_ADDRESS,
+    config.UNISWAP.ROUTERS.VIPERSWAP,
+    config.UNISWAP.ROUTERS.SUSHISWAP,
+    config.UNISWAP.ROUTERS.DFK,
+    config.UNISWAP.ROUTERS.SONICSWAP,
+    config.UNISWAP.ROUTERS.DEFIRA,
   ]
 
-  const defaultSlippage = 20 // 2% (base 1000)
-  const gasLimit = 5_000_000 // ✅ agora com '=' ao invés de ':'
+  const gasLimit = 5_000_000
 
-  const aggregator = await Aggregator.deploy(
-    routerList,
-    defaultSlippage,
-    {
-      gasLimit // ✅ passa como objeto de opções
-    }
-  )
-
+  const aggregator = await Aggregator.deploy(routerList, { gasLimit })
   await aggregator.waitForDeployment()
 
   const address = await aggregator.getAddress()
@@ -39,7 +31,7 @@ async function main() {
   console.log('🔍 Verifying contract on Etherscan...')
   await run('verify:verify', {
     address,
-    constructorArguments: [routerList, defaultSlippage],
+    constructorArguments: [routerList],
     contract: 'contracts/Aggregator.sol:Aggregator',
   })
 
