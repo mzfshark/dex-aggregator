@@ -35,18 +35,18 @@ describe("Aggregator", () => {
     await tokenA.connect(investor).approve(aggregator.target, tokens(100));
   });
 
-  it("Verifica routers adicionados corretamente", async () => {
+  it("Verify routers", async () => {
     const storedRouter = await aggregator.whiteListedRouters(0);
     expect(storedRouter).to.equal(router);
   });
 
-  it("Verifica permissão para adicionar router", async () => {
+  it("Permition to add router", async () => {
     await expect(
       aggregator.connect(investor).addWhiteListedRouter(config.UNISWAP.ROUTERS.SUSHISWAP)
     ).to.be.revertedWith("Ownable: caller is not the owner");
   });
 
-  it("Deve reverter a transação se o slippage for acima do permitido", async () => {
+  it("Revert if slippage over max. allowed", async () => {
     const deadline = Math.floor(Date.now() / 1000) + 600;
 
     const slippageAcimaDoPermitido = MAX_SLIPPAGE_PERCENT + 1; // força slippage inválido
@@ -64,7 +64,7 @@ describe("Aggregator", () => {
 });
 
 
-  it("Realiza swap com sucesso", async () => {
+  it("Swap success", async () => {
     const deadline = Math.floor(Date.now() / 1000) + 600;
 
     // Mock Router: Implemente um MockRouterV2 que permita trocas simuladas
@@ -96,7 +96,7 @@ describe("Aggregator", () => {
     expect(afterBalanceB).to.be.gt(beforeBalanceB);
   });
 
-  it("Confirma cálculo da taxa (fee) proporcional ao slippage", async () => {
+  it("Fetch fee with slippage correlation", async () => {
     const slippagePercent = 3; // 3%
     const expectedFee = slippagePercent * 1; 
     expect(expectedFee).to.equal(3);
