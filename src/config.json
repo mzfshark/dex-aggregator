@@ -5,7 +5,7 @@
       "chainId": 1666600000,
       "rpcUrl": "https://api.harmony.one",
       "contracts": {
-        "aggregator": "0xa96fDB2eFcE1e2a3Cc8a9947805d3acE2eAE6154"
+        "aggregator": "0xe451Ed60eE26845f6E5b1c2704cfF20942C4409b"
       }
     }
   }
