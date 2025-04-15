@@ -4,24 +4,20 @@ import ERC20ABI from "../abis/ERC20.json";
 import { getTokensByChainId } from "../utils/loadTokens";
 import { loadTokens as loadTokenContracts } from "./tokens";
 
-/**
- * Carrega a lista de tokens da chain e instancia contratos ERC20
- * @param {*} dispatch
- * @param {*} provider
- */
-export const loadTokens = async (dispatch, provider) => {
+// Thunk para carregar a lista de tokens
+export const loadTokens = (provider) => async (dispatch) => {
   try {
     const network = await provider.getNetwork();
     const chainId = Number(network.chainId);
     const tokenList = getTokensByChainId(chainId);
+    // loadTokenContracts deve ser implementada de forma que despache ações de sucesso/erro;
+    // por exemplo, ela pode ser uma função que execute:
+    // dispatch({ type: "TOKENS_LOADED", payload: tokenList });
     await loadTokenContracts(provider, tokenList, dispatch);
   } catch (error) {
     console.error("Erro ao carregar tokens:", error);
   }
 };
-
-
-
 
 // Carrega conta e provider
 export const loadAccount = async (dispatch) => {
@@ -29,7 +25,6 @@ export const loadAccount = async (dispatch) => {
   const account = ethers.getAddress(accounts[0]);
   dispatch({ type: "ACCOUNT_LOADED", account });
 };
-
 
 // Busca melhor rota e cotação de swap
 export const getBestSwapRoute = async (aggregatorContract, path, inputAmount) => {
@@ -85,8 +80,8 @@ export const swap = async (
     }
 
     // Realiza o swap
-    const aggregator = contracts.aggregator.connect(signer);
-    const tx = await aggregator.swap(router, path, amountIn, minAmountOut, deadline, slippageBps);
+    const aggregatorWithSigner = contracts.aggregator.connect(signer);
+    const tx = await aggregatorWithSigner.swap(router, path, amountIn, minAmountOut, deadline, slippageBps);
     const receipt = await tx.wait();
 
     dispatch({

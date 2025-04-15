@@ -1,12 +1,11 @@
 // src/components/Swap.js
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import Dropdown from "react-bootstrap/Dropdown";
-import Spinner from "react-bootstrap/Spinner";
 import { ethers } from "ethers";
 
 import Alert from "./Alert";
-import { swap, loadAccount } from "../store/interactions";
+import { swap, loadAccount, loadTokens } from "../store/interactions";
 import {
   Container,
   InputField,
@@ -16,12 +15,18 @@ import {
   SwapButton,
   ExchangeRateText,
 } from "../styles/StyledComponents";
-// Use apenas o hook do contexto para obter a conta conectada
 import { useContract } from "./ContractContext";
 
 const Swap = () => {
   console.log("Swap component re-rendered");
-  const { aggregator, account, provider } = useContract(); // aqui usamos a conta e provider do contexto
+  const { aggregator, account, provider } = useContract();
+  const dispatch = useDispatch();
+
+  // Obtenha a lista de tokens do Redux
+  const tokenListRaw = useSelector((state) => state.tokens.tokens);
+  // Use useMemo para garantir que o array seja estável nas dependências
+  const tokenList = useMemo(() => tokenListRaw || [], [tokenListRaw]);
+
   const [inputToken, setInputToken] = useState(null);
   const [outputToken, setOutputToken] = useState(null);
   const [inputAmount, setInputAmount] = useState(0);
@@ -32,71 +37,66 @@ const Swap = () => {
   const [price, setPrice] = useState(0);
   const [showAlert, setShowAlert] = useState(false);
 
-  // Remova ou comente esta linha se você optar por usar o context:
-  // const accountRedux = useSelector((state) => state.provider.account);
+  // Dispara o carregamento da lista de tokens quando o componente for montado
+  useEffect(() => {
+    if (provider && tokenList.length === 0) {
+      dispatch(loadTokens(provider));
+    }
+  }, [dispatch, provider, tokenList]);
 
-  // Se ainda precisar usar Redux para outras coisas, mantenha os demais selectors.
-  const dispatch = useDispatch();
-  const symbols = useSelector((state) => state.tokens.symbols);
-  
-  // Função para conectar carteira via Redux (se continuar usando) ou via context
   const connectHandler = async () => {
-    // Se estiver usando o ContractContext, a conexão já ocorre automaticamente
-    // Caso contrário, você pode disparar aqui uma ação para conectar a carteira
     await loadAccount(dispatch);
   };
 
   const swapHandler = async (e) => {
     e.preventDefault();
-
-    if (inputToken === outputToken) {
-      window.alert("Invalid Token Pair");
+    if (!inputToken || !outputToken) {
+      window.alert("Por favor, selecione os tokens de entrada e saída.");
       return;
     }
-
+    if (inputToken.symbol === outputToken.symbol) {
+      window.alert("Os tokens de entrada e saída não podem ser iguais.");
+      return;
+    }
     const deadline = Math.floor(Date.now() / 1000) + 60 * 20;
-    const slippage = 0;
+    const slippage = 0; // Ajuste conforme sua lógica
 
-    console.log(provider, path, router, inputAmount, bestDeal, slippage, deadline);
+    console.log("Dados do swap:", provider, path, router, inputAmount, bestDeal, slippage, deadline);
 
-    await swap(provider, { aggregator, account }, path, router, inputAmount, bestDeal, slippage, deadline, dispatch);
-
+    await swap(
+      provider,
+      { aggregator, account },
+      path,
+      router,
+      inputAmount,
+      bestDeal,
+      slippage,
+      deadline,
+      dispatch
+    );
     setShowAlert(true);
   };
 
   const getPrice = useCallback(async () => {
-    console.log("getPrice/inputAmount", inputAmount);
-    if (inputToken === outputToken) {
-      setPrice(0);
-      return;
-    }
-    if (inputAmount === "0") {
-      setPrice("N/A");
-      return;
-    }
-    if (outputAmount && inputAmount) {
+    if (inputToken && outputToken && inputAmount && outputAmount) {
       const computedPrice = Number(bestDeal) / Number(inputAmount);
       setPrice(computedPrice.toString());
+    } else {
+      setPrice("N/A");
     }
-  }, [inputAmount, inputToken, outputToken, outputAmount, bestDeal]);
+  }, [inputAmount, inputToken, outputToken, bestDeal, outputAmount]);
 
   useEffect(() => {
     getPrice();
   }, [getPrice]);
 
-  const handleTokenSelection = (type, token) => {
-    if (type === "input") {
-      setInputToken(token);
+  useEffect(() => {
+    if (inputToken && outputToken && inputToken.symbol !== outputToken.symbol) {
+      setPath([inputToken.address, outputToken.address]);
     } else {
-      setOutputToken(token);
-    }
-    if (inputToken && outputToken && inputToken !== outputToken) {
-      setPath([symbols.get(inputToken), symbols.get(outputToken)]);
-    }
-    if (inputToken && outputToken && inputToken === outputToken) {
       setPath([]);
     }
-  };
+  }, [inputToken, outputToken]);
 
   const handleInputChange = async (e) => {
     if (!e.target.value) {
@@ -108,37 +108,36 @@ const Swap = () => {
     setInputAmount(enteredAmount.toString());
 
     if (!inputToken || !outputToken) {
-      alert("Please select both input and output tokens.");
-      return;
-    }
-
-    if (inputToken === outputToken) {
-      alert("Input and output tokens cannot be the same");
+      alert("Selecione ambos os tokens de entrada e saída.");
       return;
     }
   };
 
-  useEffect(() => {
-    if (inputToken && outputToken && inputToken !== outputToken) {
-      setPath([symbols.get(inputToken), symbols.get(outputToken)]);
-    } else if (inputToken && outputToken && inputToken === outputToken) {
-      setPath([]);
+  const handleTokenSelection = (type, symbol) => {
+    const token = tokenList.find((t) => t.symbol === symbol);
+    if (!token) return;
+    if (type === "input") {
+      setInputToken(token);
+    } else {
+      setOutputToken(token);
     }
-  }, [inputToken, outputToken, symbols]);
+  };
 
   useEffect(() => {
     const fetchBestDeal = async () => {
-      if (path.length === 2 && inputAmount) {
-        const fetchBestDealResult = await aggregator.getBestAmountsOutOnUniswapForks(path, inputAmount);
-        setBestDeal(fetchBestDealResult[0]);
-        setRouter(fetchBestDealResult[1]);
-        let calculatedOutputAmount = ethers.formatUnits(fetchBestDealResult[0], 18);
-        setOutputAmount(parseFloat(calculatedOutputAmount).toFixed(2));
+      if (path.length === 2 && inputAmount && aggregator) {
+        try {
+          const fetchBestDealResult = await aggregator.getBestAmountsOutOnUniswapForks(path, inputAmount);
+          setBestDeal(fetchBestDealResult[0]);
+          setRouter(fetchBestDealResult[1]);
+          const calculatedOutputAmount = ethers.formatUnits(fetchBestDealResult[0], 18);
+          setOutputAmount(parseFloat(calculatedOutputAmount).toFixed(2));
+        } catch (error) {
+          console.error("Erro ao buscar a melhor oferta:", error);
+        }
       }
     };
-    if (aggregator) {
-      fetchBestDeal();
-    }
+    fetchBestDeal();
   }, [path, inputAmount, aggregator]);
 
   return (
@@ -150,16 +149,16 @@ const Swap = () => {
             placeholder="0"
             min="0.0"
             onChange={handleInputChange}
-            disabled={!outputToken || !inputToken}
+            disabled={!inputToken || !outputToken}
           />
-          <StyledDropdown onSelect={(token) => handleTokenSelection("input", token)}>
+          <StyledDropdown onSelect={(symbol) => handleTokenSelection("input", symbol)}>
             <Dropdown.Toggle>
-              {inputToken ? inputToken : "Select token"}
+              {inputToken ? inputToken.symbol : "Select"}
             </Dropdown.Toggle>
             <Dropdown.Menu>
-              {Array.from(symbols).map(([symbol, address]) => (
-                <Dropdown.Item key={address} eventKey={symbol}>
-                  {symbol}
+              {tokenList.map((token) => (
+                <Dropdown.Item key={token.address} eventKey={token.symbol}>
+                  {token.symbol} – {token.name}
                 </Dropdown.Item>
               ))}
             </Dropdown.Menu>
@@ -172,16 +171,16 @@ const Swap = () => {
             placeholder="0"
             min="0.0"
             value={outputAmount === 0 ? "" : outputAmount}
-            disabled={true}
+            disabled
           />
-          <StyledDropdown onSelect={(token) => handleTokenSelection("output", token)}>
+          <StyledDropdown onSelect={(symbol) => handleTokenSelection("output", symbol)}>
             <Dropdown.Toggle>
-              {outputToken ? outputToken : "Select token"}
+              {outputToken ? outputToken.symbol : "Select"}
             </Dropdown.Toggle>
             <Dropdown.Menu>
-              {Array.from(symbols).map(([symbol, address]) => (
-                <Dropdown.Item key={address} eventKey={symbol}>
-                  {symbol}
+              {tokenList.map((token) => (
+                <Dropdown.Item key={token.address} eventKey={token.symbol}>
+                  {token.symbol} – {token.name}
                 </Dropdown.Item>
               ))}
             </Dropdown.Menu>
@@ -191,15 +190,19 @@ const Swap = () => {
         <ExchangeRateText>Exchange Rate: {price}</ExchangeRateText>
 
         {account ? (
-          <div>
-            { /* Se a wallet estiver conectada (pelo contexto), exibe o swap */ }
-            <SwapButton onClick={swapHandler}>Swap</SwapButton>
-          </div>
+          <SwapButton onClick={swapHandler}>Swap</SwapButton>
         ) : (
           <SwapButton onClick={connectHandler}>Connect Wallet</SwapButton>
         )}
       </SwapContainer>
-      {/* Exibição de alertas omitida para foco na conexão */}
+      {showAlert && (
+        <Alert
+          message={bestDeal ? "Swap realizado com sucesso" : "Swap falhou"}
+          transactionHash={bestDeal ? null : ""}
+          variant={bestDeal ? "success" : "danger"}
+          setShowAlert={setShowAlert}
+        />
+      )}
     </Container>
   );
 };
